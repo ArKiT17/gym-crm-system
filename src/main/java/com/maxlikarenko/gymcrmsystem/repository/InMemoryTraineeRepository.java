@@ -49,4 +49,16 @@ public class InMemoryTraineeRepository implements TraineeRepository {
         }
         log.info("Deleted trainee with id {}", id);
     }
+
+    @Override
+    public boolean existsByUsername(String username) {
+        if (username == null) {
+            log.warn("Cannot check existence: username is null");
+            throw new IllegalArgumentException("Username cannot be null");
+        }
+        boolean exists = storage.getTrainees().values().stream()
+                .anyMatch(trainee -> username.equals(trainee.getUsername()));
+        log.debug("Existence check for username {} returned {}", username, exists);
+        return exists;
+    }
 }

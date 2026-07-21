@@ -35,4 +35,16 @@ public class InMemoryTrainerRepository implements TrainerRepository {
         log.debug("Trainer lookup for id {} returned {}", id, trainer.isPresent() ? "a result" : "no result");
         return trainer;
     }
+
+    @Override
+    public boolean existsByUsername(String username) {
+        if (username == null) {
+            log.warn("Cannot check existence: username is null");
+            throw new IllegalArgumentException("Username cannot be null");
+        }
+        boolean exists = storage.getTrainers().values().stream()
+                .anyMatch(trainer -> username.equals(trainer.getUsername()));
+        log.debug("Existence check for username {} returned {}", username, exists);
+        return exists;
+    }
 }
