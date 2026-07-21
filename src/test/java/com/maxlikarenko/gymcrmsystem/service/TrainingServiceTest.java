@@ -23,7 +23,8 @@ class TrainingServiceTest {
     @BeforeEach
     void setUp() {
         trainingRepository = mock(TrainingRepository.class);
-        trainingService = new TrainingService(trainingRepository);
+        trainingService = new TrainingService();
+        trainingService.setTrainingRepository(trainingRepository);
     }
 
     @Test

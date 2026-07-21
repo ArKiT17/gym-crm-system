@@ -2,6 +2,7 @@ package com.maxlikarenko.gymcrmsystem.repository;
 
 import com.maxlikarenko.gymcrmsystem.model.Trainee;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
@@ -12,9 +13,10 @@ import java.util.Optional;
 @Repository
 public class InMemoryTraineeRepository implements TraineeRepository {
 
-    private final Map<Long, Trainee> storage;
+    private Map<Long, Trainee> storage;
 
-    public InMemoryTraineeRepository(@Qualifier("traineeStorage") Map<Long, Trainee> storage) {
+    @Autowired
+    public void setStorage(@Qualifier("traineeStorage") Map<Long, Trainee> storage) {
         this.storage = storage;
     }
 

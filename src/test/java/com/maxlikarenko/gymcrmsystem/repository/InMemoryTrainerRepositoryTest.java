@@ -17,7 +17,8 @@ class InMemoryTrainerRepositoryTest {
     @BeforeEach
     void setUp() {
         storage = new HashMap<>();
-        repository = new InMemoryTrainerRepository(storage);
+        repository = new InMemoryTrainerRepository();
+        repository.setStorage(storage);
     }
 
     @Test

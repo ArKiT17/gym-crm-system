@@ -12,12 +12,16 @@ import java.util.Optional;
 @Slf4j
 @Service
 public class TraineeService {
-    private final TraineeRepository traineeRepository;
-    private final PasswordGenerator passwordGenerator;
+    private TraineeRepository traineeRepository;
+    private PasswordGenerator passwordGenerator;
 
     @Autowired
-    public TraineeService(TraineeRepository traineeRepository, PasswordGenerator passwordGenerator) {
+    public void setTraineeRepository(TraineeRepository traineeRepository) {
         this.traineeRepository = traineeRepository;
+    }
+
+    @Autowired
+    public void setPasswordGenerator(PasswordGenerator passwordGenerator) {
         this.passwordGenerator = passwordGenerator;
     }
 

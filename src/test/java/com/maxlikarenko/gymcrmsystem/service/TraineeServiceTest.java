@@ -27,7 +27,9 @@ class TraineeServiceTest {
     void setUp() {
         traineeRepository = mock(TraineeRepository.class);
         passwordGenerator = mock(PasswordGenerator.class);
-        traineeService = new TraineeService(traineeRepository, passwordGenerator);
+        traineeService = new TraineeService();
+        traineeService.setTraineeRepository(traineeRepository);
+        traineeService.setPasswordGenerator(passwordGenerator);
     }
 
     @Test

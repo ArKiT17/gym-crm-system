@@ -11,10 +11,10 @@ import java.util.Optional;
 @Slf4j
 @Service
 public class TrainingService {
-    private final TrainingRepository trainingRepository;
+    private TrainingRepository trainingRepository;
 
     @Autowired
-    public TrainingService(TrainingRepository trainingRepository) {
+    public void setTrainingRepository(TrainingRepository trainingRepository) {
         this.trainingRepository = trainingRepository;
     }
 

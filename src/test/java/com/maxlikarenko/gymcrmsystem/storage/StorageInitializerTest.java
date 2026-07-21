@@ -83,6 +83,12 @@ class StorageInitializerTest {
     }
 
     private StorageInitializer createInitializer(String filePath) {
-        return new StorageInitializer(filePath, trainees, trainers, trainings, objectMapper);
+        StorageInitializer initializer = new StorageInitializer();
+        initializer.setFilePath(filePath);
+        initializer.setTrainees(trainees);
+        initializer.setTrainers(trainers);
+        initializer.setTrainings(trainings);
+        initializer.setObjectMapper(objectMapper);
+        return initializer;
     }
 }

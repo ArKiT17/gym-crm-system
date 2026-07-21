@@ -27,7 +27,9 @@ class TrainerServiceTest {
     void setUp() {
         trainerRepository = mock(TrainerRepository.class);
         passwordGenerator = mock(PasswordGenerator.class);
-        trainerService = new TrainerService(trainerRepository, passwordGenerator);
+        trainerService = new TrainerService();
+        trainerService.setTrainerRepository(trainerRepository);
+        trainerService.setPasswordGenerator(passwordGenerator);
     }
 
     @Test

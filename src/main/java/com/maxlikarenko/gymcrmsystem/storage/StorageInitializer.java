@@ -6,6 +6,7 @@ import com.maxlikarenko.gymcrmsystem.model.Trainer;
 import com.maxlikarenko.gymcrmsystem.model.Training;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
@@ -18,22 +19,35 @@ import java.util.Map;
 @Component
 public class StorageInitializer {
 
-private final String filePath;
-private final Map<Long, Trainee> trainees;
-private final Map<Long, Trainer> trainers;
-private final Map<Long, Training> trainings;
-private final ObjectMapper objectMapper;
+    private String filePath;
+    private Map<Long, Trainee> trainees;
+    private Map<Long, Trainer> trainers;
+    private Map<Long, Training> trainings;
+    private ObjectMapper objectMapper;
 
-public StorageInitializer(@Value("${storage.file}") String filePath,
-                           @Qualifier("traineeStorage") Map<Long, Trainee> trainees,
-                           @Qualifier("trainerStorage") Map<Long, Trainer> trainers,
-                           @Qualifier("trainingStorage") Map<Long, Training> trainings,
-                           ObjectMapper objectMapper) {
-    this.filePath = filePath;
-    this.trainees = trainees;
-    this.trainers = trainers;
-    this.trainings = trainings;
-    this.objectMapper = objectMapper;
+    @Value("${storage.file}")
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+
+    @Autowired
+    public void setTrainees(@Qualifier("traineeStorage") Map<Long, Trainee> trainees) {
+        this.trainees = trainees;
+    }
+
+    @Autowired
+    public void setTrainers(@Qualifier("trainerStorage") Map<Long, Trainer> trainers) {
+        this.trainers = trainers;
+    }
+
+    @Autowired
+    public void setTrainings(@Qualifier("trainingStorage") Map<Long, Training> trainings) {
+        this.trainings = trainings;
+    }
+
+    @Autowired
+    public void setObjectMapper(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
     }
 
     @PostConstruct
