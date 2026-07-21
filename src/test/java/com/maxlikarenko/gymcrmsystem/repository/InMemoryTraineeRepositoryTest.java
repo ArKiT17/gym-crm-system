@@ -1,9 +1,11 @@
 package com.maxlikarenko.gymcrmsystem.repository;
 
 import com.maxlikarenko.gymcrmsystem.model.Trainee;
-import com.maxlikarenko.gymcrmsystem.storage.InMemoryStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -13,12 +15,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class InMemoryTraineeRepositoryTest {
 
-    private InMemoryStorage storage;
+    private Map<Long, Trainee> storage;
     private InMemoryTraineeRepository repository;
 
     @BeforeEach
     void setUp() {
-        storage = new InMemoryStorage();
+        storage = new HashMap<>();
         repository = new InMemoryTraineeRepository(storage);
     }
 
@@ -45,7 +47,7 @@ class InMemoryTraineeRepositoryTest {
         repository.save(firstTrainee);
         repository.save(replacementTrainee);
 
-        assertEquals(1, storage.getTrainees().size());
+        assertEquals(1, storage.size());
         assertSame(replacementTrainee, repository.findById(1L).orElseThrow());
     }
 
@@ -87,6 +89,6 @@ class InMemoryTraineeRepositoryTest {
     void deleteByIdDoesNothingForUnknownId() {
         repository.deleteById(999L);
 
-        assertTrue(storage.getTrainees().isEmpty());
+        assertTrue(storage.isEmpty());
     }
 }

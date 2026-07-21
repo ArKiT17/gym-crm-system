@@ -1,18 +1,22 @@
 package com.maxlikarenko.gymcrmsystem.repository;
 
 import com.maxlikarenko.gymcrmsystem.model.Trainee;
-import com.maxlikarenko.gymcrmsystem.storage.InMemoryStorage;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
+import java.util.Map;
 import java.util.Optional;
 
-@AllArgsConstructor
 @Slf4j
 @Repository
 public class InMemoryTraineeRepository implements TraineeRepository {
-    private final InMemoryStorage storage;
+
+    private final Map<Long, Trainee> storage;
+
+    public InMemoryTraineeRepository(@Qualifier("traineeStorage") Map<Long, Trainee> storage) {
+        this.storage = storage;
+    }
 
     @Override
     public Trainee save(Trainee trainee) {
@@ -21,7 +25,7 @@ public class InMemoryTraineeRepository implements TraineeRepository {
             throw new IllegalArgumentException("Trainee cannot be null");
         }
         log.info("Saving trainee with id {}", trainee.getId());
-        storage.getTrainees().put(trainee.getId(), trainee);
+        storage.put(trainee.getId(), trainee);
         return trainee;
     }
 
@@ -31,7 +35,7 @@ public class InMemoryTraineeRepository implements TraineeRepository {
             log.warn("Cannot find trainee: id is null");
             throw new IllegalArgumentException("ID cannot be null");
         }
-        Optional<Trainee> trainee = Optional.ofNullable(storage.getTrainees().get(id));
+        Optional<Trainee> trainee = Optional.ofNullable(storage.get(id));
         log.debug("Trainee lookup for id {} returned {}", id, trainee.isPresent() ? "a result" : "no result");
         return trainee;
     }
@@ -42,7 +46,7 @@ public class InMemoryTraineeRepository implements TraineeRepository {
             log.warn("Cannot delete trainee: id is null");
             throw new IllegalArgumentException("ID cannot be null");
         }
-        Trainee removedTrainee = storage.getTrainees().remove(id);
+        Trainee removedTrainee = storage.remove(id);
         if (removedTrainee == null) {
             log.warn("Trainee with id {} was not found for deletion", id);
             return;
@@ -56,7 +60,7 @@ public class InMemoryTraineeRepository implements TraineeRepository {
             log.warn("Cannot check existence: username is null");
             throw new IllegalArgumentException("Username cannot be null");
         }
-        boolean exists = storage.getTrainees().values().stream()
+        boolean exists = storage.values().stream()
                 .anyMatch(trainee -> username.equals(trainee.getUsername()));
         log.debug("Existence check for username {} returned {}", username, exists);
         return exists;

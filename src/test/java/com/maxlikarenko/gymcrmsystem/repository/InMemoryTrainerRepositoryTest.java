@@ -1,20 +1,22 @@
 package com.maxlikarenko.gymcrmsystem.repository;
 
 import com.maxlikarenko.gymcrmsystem.model.Trainer;
-import com.maxlikarenko.gymcrmsystem.storage.InMemoryStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class InMemoryTrainerRepositoryTest {
 
-    private InMemoryStorage storage;
+    private Map<Long, Trainer> storage;
     private InMemoryTrainerRepository repository;
 
     @BeforeEach
     void setUp() {
-        storage = new InMemoryStorage();
+        storage = new HashMap<>();
         repository = new InMemoryTrainerRepository(storage);
     }
 
@@ -30,7 +32,7 @@ class InMemoryTrainerRepositoryTest {
         Trainer savedTrainer = repository.save(trainer);
 
         assertSame(trainer, savedTrainer);
-        assertSame(trainer, storage.getTrainers().get(10L));
+        assertSame(trainer, storage.get(10L));
         assertEquals(trainer, repository.findById(10L).orElseThrow());
     }
 
@@ -42,7 +44,7 @@ class InMemoryTrainerRepositoryTest {
         repository.save(firstTrainer);
         repository.save(replacementTrainer);
 
-        assertEquals(1, storage.getTrainers().size());
+        assertEquals(1, storage.size());
         assertSame(replacementTrainer, repository.findById(10L).orElseThrow());
     }
 

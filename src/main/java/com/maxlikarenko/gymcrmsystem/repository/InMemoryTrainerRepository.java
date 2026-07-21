@@ -1,18 +1,22 @@
 package com.maxlikarenko.gymcrmsystem.repository;
 
 import com.maxlikarenko.gymcrmsystem.model.Trainer;
-import com.maxlikarenko.gymcrmsystem.storage.InMemoryStorage;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
+import java.util.Map;
 import java.util.Optional;
 
-@AllArgsConstructor
 @Slf4j
 @Repository
 public class InMemoryTrainerRepository implements TrainerRepository {
-    private final InMemoryStorage storage;
+
+    private final Map<Long, Trainer> storage;
+
+    public InMemoryTrainerRepository(@Qualifier("trainerStorage") Map<Long, Trainer> storage) {
+        this.storage = storage;
+    }
 
     @Override
     public Trainer save(Trainer trainer) {
@@ -21,7 +25,7 @@ public class InMemoryTrainerRepository implements TrainerRepository {
             throw new IllegalArgumentException("Trainer cannot be null");
         }
         log.info("Saving trainer with id {}", trainer.getId());
-        storage.getTrainers().put(trainer.getId(), trainer);
+        storage.put(trainer.getId(), trainer);
         return trainer;
     }
 
@@ -31,7 +35,7 @@ public class InMemoryTrainerRepository implements TrainerRepository {
             log.warn("Cannot find trainer: id is null");
             throw new IllegalArgumentException("ID cannot be null");
         }
-        Optional<Trainer> trainer = Optional.ofNullable(storage.getTrainers().get(id));
+        Optional<Trainer> trainer = Optional.ofNullable(storage.get(id));
         log.debug("Trainer lookup for id {} returned {}", id, trainer.isPresent() ? "a result" : "no result");
         return trainer;
     }
@@ -42,7 +46,7 @@ public class InMemoryTrainerRepository implements TrainerRepository {
             log.warn("Cannot check existence: username is null");
             throw new IllegalArgumentException("Username cannot be null");
         }
-        boolean exists = storage.getTrainers().values().stream()
+        boolean exists = storage.values().stream()
                 .anyMatch(trainer -> username.equals(trainer.getUsername()));
         log.debug("Existence check for username {} returned {}", username, exists);
         return exists;
