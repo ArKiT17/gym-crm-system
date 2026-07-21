@@ -68,5 +68,13 @@ public class TraineeService {
             log.warn("Cannot process trainee: trainee is null");
             throw new IllegalArgumentException("Trainee cannot be null");
         }
+        if (isBlank(trainee.getFirstName()) || isBlank(trainee.getLastName())) {
+            log.warn("Cannot process trainee: first name and last name are required");
+            throw new IllegalArgumentException("Trainee first name and last name are required");
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

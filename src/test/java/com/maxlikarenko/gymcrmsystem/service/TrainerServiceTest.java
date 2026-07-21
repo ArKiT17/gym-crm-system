@@ -40,6 +40,24 @@ class TrainerServiceTest {
     }
 
     @Test
+    void createRejectsTrainerWithoutFirstName() {
+        Trainer trainer = Trainer.builder().lastName("Smith").build();
+
+        assertThrows(IllegalArgumentException.class, () -> trainerService.create(trainer));
+
+        verifyNoInteractions(trainerRepository, passwordGenerator);
+    }
+
+    @Test
+    void createRejectsTrainerWithoutLastName() {
+        Trainer trainer = Trainer.builder().firstName("Jane").build();
+
+        assertThrows(IllegalArgumentException.class, () -> trainerService.create(trainer));
+
+        verifyNoInteractions(trainerRepository, passwordGenerator);
+    }
+
+    @Test
     void createSetsUsernameAndPasswordAndSavesTrainer() {
         Trainer trainer = Trainer.builder()
                 .id(10L)
@@ -85,6 +103,8 @@ class TrainerServiceTest {
     void updateSavesTrainerWithoutRegeneratingCredentials() {
         Trainer trainer = Trainer.builder()
                 .id(10L)
+                .firstName("Jane")
+                .lastName("Smith")
                 .username("Jane.Smith")
                 .password("Existing01")
                 .build();

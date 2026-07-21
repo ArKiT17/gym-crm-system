@@ -40,6 +40,24 @@ class TraineeServiceTest {
     }
 
     @Test
+    void createRejectsTraineeWithoutFirstName() {
+        Trainee trainee = Trainee.builder().lastName("Smith").build();
+
+        assertThrows(IllegalArgumentException.class, () -> traineeService.create(trainee));
+
+        verifyNoInteractions(traineeRepository, passwordGenerator);
+    }
+
+    @Test
+    void createRejectsTraineeWithoutLastName() {
+        Trainee trainee = Trainee.builder().firstName("John").build();
+
+        assertThrows(IllegalArgumentException.class, () -> traineeService.create(trainee));
+
+        verifyNoInteractions(traineeRepository, passwordGenerator);
+    }
+
+    @Test
     void createSetsUsernameAndPasswordAndSavesTrainee() {
         Trainee trainee = Trainee.builder()
                 .id(1L)
@@ -85,6 +103,8 @@ class TraineeServiceTest {
     void updateSavesTraineeWithoutRegeneratingCredentials() {
         Trainee trainee = Trainee.builder()
                 .id(1L)
+                .firstName("John")
+                .lastName("Smith")
                 .username("John.Smith")
                 .password("Existing01")
                 .build();

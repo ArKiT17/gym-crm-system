@@ -63,5 +63,13 @@ public class TrainerService {
             log.warn("Cannot process trainer: trainer is null");
             throw new IllegalArgumentException("Trainer cannot be null");
         }
+        if (isBlank(trainer.getFirstName()) || isBlank(trainer.getLastName())) {
+            log.warn("Cannot process trainer: first name and last name are required");
+            throw new IllegalArgumentException("Trainer first name and last name are required");
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }
