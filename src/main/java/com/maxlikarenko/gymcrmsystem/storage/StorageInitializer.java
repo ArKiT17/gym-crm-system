@@ -37,8 +37,8 @@ public class StorageInitializer {
                     loadedStorage.getTrainers().size(),
                     loadedStorage.getTrainings().size());
         } catch (IOException e) {
-            log.error("Failed to load in-memory storage from classpath resource '{}'. "
-                    + "Application will start with an empty storage", filePath, e);
+            log.error("Failed to load in-memory storage from classpath resource '{}'. ", filePath, e);
+            throw new IllegalStateException("Failed to load storage from '" + filePath + "'", e);
         }
     }
 }
