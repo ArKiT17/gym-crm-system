@@ -1,142 +1,235 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
 import com.maxlikarenko.gymcrmsystem.model.Trainee;
+import com.maxlikarenko.gymcrmsystem.model.Trainer;
+import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.TraineeRepository;
-import com.maxlikarenko.gymcrmsystem.util.PasswordGenerator;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class TraineeServiceTest {
 
+    private UserAccountService userAccountService;
+    private TrainerService trainerService;
     private TraineeRepository traineeRepository;
-    private PasswordGenerator passwordGenerator;
     private TraineeService traineeService;
 
     @BeforeEach
     void setUp() {
+        userAccountService = mock(UserAccountService.class);
+        trainerService = mock(TrainerService.class);
         traineeRepository = mock(TraineeRepository.class);
-        passwordGenerator = mock(PasswordGenerator.class);
         traineeService = new TraineeService();
+        traineeService.setUserAccountService(userAccountService);
+        traineeService.setTrainerService(trainerService);
         traineeService.setTraineeRepository(traineeRepository);
-        traineeService.setPasswordGenerator(passwordGenerator);
     }
 
+    private User user(String first, String last) {
+        return new User(first, last, first + "." + last, "pass", true);
+    }
+
+    private Trainee trainee(User u) {
+        return new Trainee(u, null, null, new HashSet<>(), new HashSet<>());
+    }
+
+    // create
+
     @Test
-    void createRejectsNullTrainee() {
+    void createThrowsForNullTrainee() {
         assertThrows(IllegalArgumentException.class, () -> traineeService.create(null));
-
-        verifyNoInteractions(traineeRepository, passwordGenerator);
+        verifyNoInteractions(traineeRepository, userAccountService);
     }
 
     @Test
-    void createRejectsTraineeWithoutFirstName() {
-        Trainee trainee = Trainee.builder().lastName("Smith").build();
+    void createThrowsWhenUserIsNull() {
+        Trainee t = new Trainee(null, null, null, new HashSet<>(), new HashSet<>());
+        doThrow(new IllegalArgumentException("User cannot be null"))
+                .when(userAccountService).prepareForRegistration(null);
 
-        assertThrows(IllegalArgumentException.class, () -> traineeService.create(trainee));
-
-        verifyNoInteractions(traineeRepository, passwordGenerator);
+        assertThrows(IllegalArgumentException.class, () -> traineeService.create(t));
+        verifyNoInteractions(traineeRepository);
     }
 
     @Test
-    void createRejectsTraineeWithoutLastName() {
-        Trainee trainee = Trainee.builder().firstName("John").build();
+    void createCallsPrepareForRegistrationOnUser() {
+        User u = user("John", "Smith");
+        Trainee t = trainee(u);
+        when(traineeRepository.save(t)).thenReturn(t);
 
-        assertThrows(IllegalArgumentException.class, () -> traineeService.create(trainee));
+        traineeService.create(t);
 
-        verifyNoInteractions(traineeRepository, passwordGenerator);
+        verify(userAccountService).prepareForRegistration(u);
     }
 
     @Test
-    void createSetsUsernameAndPasswordAndSavesTrainee() {
-        Trainee trainee = Trainee.builder()
-                .id(1L)
-                .firstName("John")
-                .lastName("Smith")
-                .build();
-        when(traineeRepository.existsByUsername("John.Smith")).thenReturn(false);
-        when(passwordGenerator.generate()).thenReturn("Password01");
-        when(traineeRepository.save(trainee)).thenReturn(trainee);
+    void createSavesAndReturnsTrainee() {
+        User u = user("John", "Smith");
+        Trainee t = trainee(u);
+        when(traineeRepository.save(t)).thenReturn(t);
 
-        Trainee result = traineeService.create(trainee);
-
-        assertSame(trainee, result);
-        assertEquals("John.Smith", trainee.getUsername());
-        assertEquals("Password01", trainee.getPassword());
-        verify(traineeRepository).save(trainee);
+        assertSame(t, traineeService.create(t));
+        verify(traineeRepository).save(t);
     }
 
-    @Test
-    void createAddsSuffixWhenUsernameAlreadyExists() {
-        Trainee trainee = Trainee.builder()
-                .firstName("John")
-                .lastName("Smith")
-                .build();
-        when(traineeRepository.existsByUsername("John.Smith")).thenReturn(true);
-        when(traineeRepository.existsByUsername("John.Smith1")).thenReturn(false);
-        when(passwordGenerator.generate()).thenReturn("Password01");
-        when(traineeRepository.save(trainee)).thenReturn(trainee);
-
-        traineeService.create(trainee);
-
-        assertEquals("John.Smith1", trainee.getUsername());
-    }
+    // update
 
     @Test
-    void updateRejectsNullTrainee() {
+    void updateThrowsForNullTrainee() {
         assertThrows(IllegalArgumentException.class, () -> traineeService.update(null));
-
-        verifyNoInteractions(traineeRepository, passwordGenerator);
+        verifyNoInteractions(traineeRepository, userAccountService);
     }
 
     @Test
-    void updateSavesTraineeWithoutRegeneratingCredentials() {
-        Trainee trainee = Trainee.builder()
-                .id(1L)
-                .firstName("John")
-                .lastName("Smith")
-                .username("John.Smith")
-                .password("Existing01")
-                .build();
-        when(traineeRepository.save(trainee)).thenReturn(trainee);
+    void updateCallsValidateUserOnUser() {
+        User u = user("John", "Smith");
+        Trainee t = trainee(u);
+        when(traineeRepository.save(t)).thenReturn(t);
 
-        assertSame(trainee, traineeService.update(trainee));
+        traineeService.update(t);
 
-        verify(traineeRepository).save(trainee);
-        verifyNoInteractions(passwordGenerator);
+        verify(userAccountService).validateUser(u);
     }
 
     @Test
-    void deleteDelegatesToRepository() {
+    void updateDoesNotCallPrepareForRegistration() {
+        User u = user("John", "Smith");
+        Trainee t = trainee(u);
+        when(traineeRepository.save(t)).thenReturn(t);
+
+        traineeService.update(t);
+
+        verify(userAccountService, never()).prepareForRegistration(any());
+    }
+
+    @Test
+    void updateSavesAndReturnsTrainee() {
+        User u = user("John", "Smith");
+        Trainee t = trainee(u);
+        when(traineeRepository.save(t)).thenReturn(t);
+
+        assertSame(t, traineeService.update(t));
+        verify(traineeRepository).save(t);
+    }
+
+    // delete by id
+
+    @Test
+    void deleteByIdThrowsWhenTraineeNotFound() {
+        when(traineeRepository.findById(999L)).thenReturn(Optional.empty());
+        assertThrows(EntityNotFoundException.class, () -> traineeService.delete(999L));
+    }
+
+    @Test
+    void deleteByIdClearsTrainersAndDeletesById() {
+        User u = user("John", "Smith");
+        Trainee t = trainee(u);
+        when(traineeRepository.findById(1L)).thenReturn(Optional.of(t));
+
         traineeService.delete(1L);
 
+        assertTrue(t.getTrainers().isEmpty());
         verify(traineeRepository).deleteById(1L);
     }
 
+    // delete by username
+
     @Test
-    void findByIdReturnsFoundTrainee() {
-        Trainee trainee = Trainee.builder().id(1L).build();
-        when(traineeRepository.findById(1L)).thenReturn(Optional.of(trainee));
-
-        Optional<Trainee> result = traineeService.findById(1L);
-
-        assertEquals(Optional.of(trainee), result);
+    void deleteByUsernameThrowsWhenTraineeNotFound() {
+        when(traineeRepository.findByUserUsername("missing")).thenReturn(Optional.empty());
+        assertThrows(EntityNotFoundException.class, () -> traineeService.delete("missing"));
     }
 
     @Test
-    void findByIdReturnsEmptyWhenTraineeDoesNotExist() {
-        when(traineeRepository.findById(999L)).thenReturn(Optional.empty());
+    void deleteByUsernameClearsTrainersAndDeletesEntity() {
+        User u = user("John", "Smith");
+        Trainee t = trainee(u);
+        when(traineeRepository.findByUserUsername("John.Smith")).thenReturn(Optional.of(t));
 
-        assertTrue(traineeService.findById(999L).isEmpty());
+        traineeService.delete("John.Smith");
+
+        assertTrue(t.getTrainers().isEmpty());
+        verify(traineeRepository).delete(t);
+    }
+
+    // find by id
+
+    @Test
+    void findByIdReturnsPresentWhenFound() {
+        User u = user("John", "Smith");
+        Trainee t = trainee(u);
+        when(traineeRepository.findById(1L)).thenReturn(Optional.of(t));
+
+        assertEquals(Optional.of(t), traineeService.find(1L));
+    }
+
+    @Test
+    void findByIdReturnsEmptyWhenNotFound() {
+        when(traineeRepository.findById(999L)).thenReturn(Optional.empty());
+        assertTrue(traineeService.find(999L).isEmpty());
+    }
+
+    // find by username
+
+    @Test
+    void findByUsernameReturnsPresentWhenFound() {
+        User u = user("John", "Smith");
+        Trainee t = trainee(u);
+        when(traineeRepository.findByUserUsername("John.Smith")).thenReturn(Optional.of(t));
+
+        assertEquals(Optional.of(t), traineeService.find("John.Smith"));
+    }
+
+    @Test
+    void findByUsernameReturnsEmptyWhenNotFound() {
+        when(traineeRepository.findByUserUsername("missing")).thenReturn(Optional.empty());
+        assertTrue(traineeService.find("missing").isEmpty());
+    }
+
+    // updateTrainers
+
+    @Test
+    void updateTrainersThrowsWhenTraineeNotFound() {
+        when(traineeRepository.findByUserUsername("missing")).thenReturn(Optional.empty());
+        assertThrows(EntityNotFoundException.class,
+                () -> traineeService.updateTrainers("missing", Set.of("t1")));
+    }
+
+    @Test
+    void updateTrainersPropagatesEntityNotFoundFromTrainerService() {
+        User u = user("John", "Smith");
+        Trainee t = trainee(u);
+        when(traineeRepository.findByUserUsername("John.Smith")).thenReturn(Optional.of(t));
+        Set<String> names = Set.of("missing.trainer");
+        when(trainerService.findAll(names))
+                .thenThrow(new EntityNotFoundException("Trainer not found: missing.trainer"));
+
+        assertThrows(EntityNotFoundException.class,
+                () -> traineeService.updateTrainers("John.Smith", names));
+    }
+
+    @Test
+    void updateTrainersReplacesTrainerSet() {
+        User u = user("John", "Smith");
+        Trainee t = trainee(u);
+        User trainerUser = new User("Jane", "Doe", "Jane.Doe", "pass", true);
+        Trainer trainer = new Trainer(trainerUser, null, new HashSet<>(), new HashSet<>());
+
+        when(traineeRepository.findByUserUsername("John.Smith")).thenReturn(Optional.of(t));
+        Set<String> names = Set.of("Jane.Doe");
+        when(trainerService.findAll(names)).thenReturn(Set.of(trainer));
+
+        Set<Trainer> result = traineeService.updateTrainers("John.Smith", names);
+
+        assertEquals(1, result.size());
+        assertTrue(result.contains(trainer));
     }
 }
