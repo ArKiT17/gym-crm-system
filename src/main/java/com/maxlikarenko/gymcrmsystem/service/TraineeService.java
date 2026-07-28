@@ -1,80 +1,104 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
 import com.maxlikarenko.gymcrmsystem.model.Trainee;
+import com.maxlikarenko.gymcrmsystem.model.Trainer;
 import com.maxlikarenko.gymcrmsystem.repository.TraineeRepository;
-import com.maxlikarenko.gymcrmsystem.util.PasswordGenerator;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.Set;
 
 @Slf4j
 @Service
 public class TraineeService {
+    private UserAccountService userAccountService;
+    private TrainerService trainerService;
     private TraineeRepository traineeRepository;
-    private PasswordGenerator passwordGenerator;
+
+    @Autowired
+    public void setUserAccountService(UserAccountService userAccountService) {
+        this.userAccountService = userAccountService;
+    }
+
+    @Autowired
+    public void setTrainerService(TrainerService trainerService) {
+        this.trainerService = trainerService;
+    }
 
     @Autowired
     public void setTraineeRepository(TraineeRepository traineeRepository) {
         this.traineeRepository = traineeRepository;
     }
 
-    @Autowired
-    public void setPasswordGenerator(PasswordGenerator passwordGenerator) {
-        this.passwordGenerator = passwordGenerator;
-    }
-
+    @Transactional
     public Trainee create(Trainee trainee) {
-        validateTrainee(trainee);
-        trainee.setUsername(generateUsername(trainee.getFirstName(), trainee.getLastName()));
-        trainee.setPassword(passwordGenerator.generate());
-        log.info("Creating trainee with id {}", trainee.getId());
+        if (trainee == null) {
+            throw new IllegalArgumentException("Trainee cannot be null");
+        }
+
+        userAccountService.prepareForRegistration(trainee.getUser());
+
+        log.info("Creating trainee with username {}", trainee.getUser().getUsername());
         return traineeRepository.save(trainee);
     }
 
+    @Transactional
     public Trainee update(Trainee trainee) {
-        validateTrainee(trainee);
-        log.info("Updating trainee with id {}", trainee.getId());
+        if (trainee == null) {
+            throw new IllegalArgumentException("Trainee cannot be null");
+        }
+        userAccountService.validateUser(trainee.getUser());
+
+        log.info("Updating trainee with username {}", trainee.getUser().getUsername());
         return traineeRepository.save(trainee);
     }
 
+    @Transactional
     public void delete(Long id) {
+        Trainee trainee = find(id)
+                .orElseThrow(() -> new EntityNotFoundException("Trainee with id " + id + " not found"));
         log.info("Deleting trainee with id {}", id);
+
+        trainee.getTrainers().clear();
+
         traineeRepository.deleteById(id);
     }
 
-    public Optional<Trainee> findById(Long id) {
+    @Transactional
+    public void delete(String username) {
+        Trainee trainee = find(username)
+                .orElseThrow(() -> new EntityNotFoundException("Trainee not found: " + username));
+        log.info("Deleting trainee with username {}", username);
+
+        trainee.getTrainers().clear();
+
+        traineeRepository.delete(trainee);
+    }
+
+    public Optional<Trainee> find(Long id) {
         log.debug("Finding trainee with id {}", id);
-        Optional<Trainee> trainee = traineeRepository.findById(id);
-        log.debug("Trainee with id {} found: {}", id, trainee.isPresent());
-        return trainee;
+        return traineeRepository.findById(id);
     }
 
-    private String generateUsername(String firstName, String lastName) {
-        String username = firstName + "." + lastName;
-        int suffix = 0;
-
-        while (traineeRepository.existsByUsername(username)) {
-            suffix++;
-            username = firstName + "." + lastName + suffix;
-        }
-
-        return username;
+    public Optional<Trainee> find(String username) {
+        log.debug("Finding trainee with username {}", username);
+        return traineeRepository.findByUserUsername(username);
     }
 
-    private void validateTrainee(Trainee trainee) {
-        if (trainee == null) {
-            log.warn("Cannot process trainee: trainee is null");
-            throw new IllegalArgumentException("Trainee cannot be null");
-        }
-        if (isBlank(trainee.getFirstName()) || isBlank(trainee.getLastName())) {
-            log.warn("Cannot process trainee: first name and last name are required");
-            throw new IllegalArgumentException("Trainee first name and last name are required");
-        }
-    }
+    @Transactional
+    public Set<Trainer> updateTrainers(String username, Set<String> trainerUsernames) {
+        Trainee trainee = find(username)
+                .orElseThrow(() -> new EntityNotFoundException("Trainee not found: " + username));
+        Set<Trainer> newTrainers = trainerService.findAll(trainerUsernames);
 
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
+        trainee.getTrainers().clear();
+        trainee.getTrainers().addAll(newTrainers);
+
+        log.info("Updated trainer list for trainee {}", username);
+        return trainee.getTrainers();
     }
 }
