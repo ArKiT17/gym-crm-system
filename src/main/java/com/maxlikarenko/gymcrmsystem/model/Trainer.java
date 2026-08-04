@@ -32,10 +32,8 @@ public class Trainer {
     @ManyToMany(mappedBy = "trainers", fetch = FetchType.LAZY)
     private Set<Trainee> trainees = new HashSet<>();
 
-    public Trainer(User user, TrainingType specialization, Set<Training> trainings, Set<Trainee> trainees) {
+    public Trainer(User user, TrainingType specialization) {
         this.user = user;
         this.specialization = specialization;
-        this.trainings = trainings;
-        this.trainees = trainees;
     }
 }
