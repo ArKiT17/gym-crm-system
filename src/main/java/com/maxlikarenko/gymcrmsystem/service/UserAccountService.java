@@ -26,60 +26,28 @@ public class UserAccountService {
     }
 
     @Transactional
-    public void activate(String username) {
+    public void activate(String username, boolean activated) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
-        if (user.isActive()) {
+        if (user.isActive() == activated) {
             log.warn("Activation failed for user {}", username);
-            throw new IllegalStateException("User " + username + " is already active");
+            throw new IllegalStateException("User " + username + " is already " + (activated ? "active" : "inactive"));
         }
-        user.setActive(true);
-        log.info("Activated user {}", username);
-    }
-
-    @Transactional
-    public void deactivate(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
-        if (!user.isActive()) {
-            log.warn("Deactivation failed for user {}", username);
-            throw new IllegalStateException("User " + username + " is already inactive");
-        }
-        user.setActive(false);
-        log.info("Deactivated user {}", username);
+        user.setActive(activated);
+        log.info("{} user {}", activated ? "Activated" : "Deactivated", username);
     }
 
     @Transactional
     public void changePassword(String username, String newPassword) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
-        if (isBlank(newPassword)) {
-            log.warn("Password change failed for user {}: new password is blank", username);
-            throw new IllegalArgumentException("New password cannot be blank");
-        }
         user.setPassword(newPassword);
         log.info("Password changed for user {}", username);
     }
 
-    public void prepareForRegistration(User user) {
-        validateUser(user);
+    public void generateCredentials(User user) {
         user.setUsername(generateUsername(user.getFirstName(), user.getLastName()));
         user.setPassword(passwordGenerator.generate());
-    }
-
-    public void validateUser(User user) {
-        if (user == null) {
-            log.warn("Cannot process user: user is null");
-            throw new IllegalArgumentException("User cannot be null");
-        }
-        if (isBlank(user.getFirstName()) || isBlank(user.getLastName())) {
-            log.warn("Cannot process user: first name and last name are required");
-            throw new IllegalArgumentException("User first name and last name are required");
-        }
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
     }
 
     private String generateUsername(String firstName, String lastName) {

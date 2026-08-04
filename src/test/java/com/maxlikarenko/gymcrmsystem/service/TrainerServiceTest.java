@@ -6,9 +6,7 @@ import com.maxlikarenko.gymcrmsystem.repository.TrainerRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
@@ -16,7 +14,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TrainerServiceTest {
-
     private UserAccountService userAccountService;
     private TrainerRepository trainerRepository;
     private TrainerService trainerService;
@@ -30,194 +27,75 @@ class TrainerServiceTest {
         trainerService.setTrainerRepository(trainerRepository);
     }
 
-    private User user(String first, String last) {
-        return new User(first, last, first + "." + last, "pass", true);
-    }
+    @Test
+    void createGeneratesCredentialsAndSavesTrainer() {
+        User user = new User("Jane", "Smith");
+        Trainer trainer = new Trainer(user, null);
+        when(trainerRepository.save(trainer)).thenReturn(trainer);
 
-    private Trainer trainer(User u) {
-        return new Trainer(u, null, new HashSet<>(), new HashSet<>());
+        assertSame(trainer, trainerService.create(trainer));
+        verify(userAccountService).generateCredentials(user);
+        verify(trainerRepository).save(trainer);
     }
-
-    private Trainer trainerWithId(User u, long id) {
-        Trainer t = trainer(u);
-        ReflectionTestUtils.setField(t, "id", id);
-        return t;
-    }
-
-    // create
 
     @Test
-    void createThrowsForNullTrainer() {
+    void createRejectsNullTrainer() {
         assertThrows(IllegalArgumentException.class, () -> trainerService.create(null));
-        verifyNoInteractions(trainerRepository, userAccountService);
+        verifyNoInteractions(userAccountService, trainerRepository);
     }
 
     @Test
-    void createThrowsWhenUserIsNull() {
-        Trainer t = new Trainer(null, null, new HashSet<>(), new HashSet<>());
-        doThrow(new IllegalArgumentException("User cannot be null"))
-                .when(userAccountService).prepareForRegistration(null);
+    void updateChangesTrainerFieldsByUsername() {
+        Trainer trainer = new Trainer(new User("Jane", "Smith"), null);
+        when(trainerRepository.findByUserUsername("Jane.Smith")).thenReturn(Optional.of(trainer));
 
-        assertThrows(IllegalArgumentException.class, () -> trainerService.create(t));
-        verifyNoInteractions(trainerRepository);
+        Trainer result = trainerService.update("Jane.Smith", "Janet", "Doe", false);
+
+        assertSame(trainer, result);
+        assertAll(
+                () -> assertEquals("Janet", trainer.getUser().getFirstName()),
+                () -> assertEquals("Doe", trainer.getUser().getLastName()),
+                () -> assertFalse(trainer.getUser().isActive())
+        );
     }
 
     @Test
-    void createCallsPrepareForRegistrationOnUser() {
-        User u = user("Jane", "Smith");
-        Trainer t = trainer(u);
-        when(trainerRepository.save(t)).thenReturn(t);
+    void getByIdAndUsernameReturnTrainer() {
+        Trainer trainer = new Trainer(new User("Jane", "Smith"), null);
+        when(trainerRepository.findById(1L)).thenReturn(Optional.of(trainer));
+        when(trainerRepository.findByUserUsername("Jane.Smith")).thenReturn(Optional.of(trainer));
 
-        trainerService.create(t);
-
-        verify(userAccountService).prepareForRegistration(u);
+        assertAll(
+                () -> assertSame(trainer, trainerService.get(1L)),
+                () -> assertSame(trainer, trainerService.get("Jane.Smith"))
+        );
     }
 
     @Test
-    void createSavesAndReturnsTrainer() {
-        User u = user("Jane", "Smith");
-        Trainer t = trainer(u);
-        when(trainerRepository.save(t)).thenReturn(t);
-
-        assertSame(t, trainerService.create(t));
-        verify(trainerRepository).save(t);
-    }
-
-    // update
-
-    @Test
-    void updateThrowsForNullTrainer() {
-        assertThrows(IllegalArgumentException.class, () -> trainerService.update(null));
-        verifyNoInteractions(trainerRepository, userAccountService);
-    }
-
-    @Test
-    void updateCallsValidateUserOnUser() {
-        User u = user("Jane", "Smith");
-        Trainer t = trainer(u);
-        when(trainerRepository.save(t)).thenReturn(t);
-
-        trainerService.update(t);
-
-        verify(userAccountService).validateUser(u);
-    }
-
-    @Test
-    void updateDoesNotCallPrepareForRegistration() {
-        User u = user("Jane", "Smith");
-        Trainer t = trainer(u);
-        when(trainerRepository.save(t)).thenReturn(t);
-
-        trainerService.update(t);
-
-        verify(userAccountService, never()).prepareForRegistration(any());
-    }
-
-    @Test
-    void updateSavesAndReturnsTrainer() {
-        User u = user("Jane", "Smith");
-        Trainer t = trainer(u);
-        when(trainerRepository.save(t)).thenReturn(t);
-
-        assertSame(t, trainerService.update(t));
-        verify(trainerRepository).save(t);
-    }
-
-    // find by id
-
-    @Test
-    void findByIdReturnsPresentWhenFound() {
-        User u = user("Jane", "Smith");
-        Trainer t = trainerWithId(u, 10L);
-        when(trainerRepository.findById(10L)).thenReturn(Optional.of(t));
-
-        assertEquals(Optional.of(t), trainerService.find(10L));
-    }
-
-    @Test
-    void findByIdReturnsEmptyWhenNotFound() {
-        when(trainerRepository.findById(999L)).thenReturn(Optional.empty());
-        assertTrue(trainerService.find(999L).isEmpty());
-    }
-
-    // find by username
-
-    @Test
-    void findByUsernameReturnsPresentWhenFound() {
-        User u = user("Jane", "Smith");
-        Trainer t = trainerWithId(u, 10L);
-        when(trainerRepository.findByUserUsername("Jane.Smith")).thenReturn(Optional.of(t));
-
-        assertEquals(Optional.of(t), trainerService.find("Jane.Smith"));
-    }
-
-    @Test
-    void findByUsernameReturnsEmptyWhenNotFound() {
+    void getThrowsWhenTrainerDoesNotExist() {
+        when(trainerRepository.findById(1L)).thenReturn(Optional.empty());
         when(trainerRepository.findByUserUsername("missing")).thenReturn(Optional.empty());
-        assertTrue(trainerService.find("missing").isEmpty());
-    }
 
-    // findAll
-
-    @Test
-    void findAllThrowsEntityNotFoundWhenAnyTrainerMissing() {
-        User u = user("Jane", "Smith");
-        Trainer t = trainerWithId(u, 1L);
-        Set<String> usernames = Set.of("Jane.Smith", "missing.trainer");
-        when(trainerRepository.findByUserUsernameIn(usernames)).thenReturn(Set.of(t));
-
-        assertThrows(EntityNotFoundException.class, () -> trainerService.findAll(usernames));
+        assertAll(
+                () -> assertThrows(EntityNotFoundException.class, () -> trainerService.get(1L)),
+                () -> assertThrows(EntityNotFoundException.class, () -> trainerService.get("missing"))
+        );
     }
 
     @Test
-    void findAllReturnsSingleMatchingTrainer() {
-        User u = user("Jane", "Smith");
-        Trainer t = trainerWithId(u, 1L);
-        Set<String> usernames = Set.of("Jane.Smith");
-        when(trainerRepository.findByUserUsernameIn(usernames)).thenReturn(Set.of(t));
+    void getAllRejectsMissingTrainer() {
+        Trainer trainer = new Trainer(new User("Jane", "Smith"), null);
+        Set<String> usernames = Set.of("Jane.Smith", "missing");
+        when(trainerRepository.findByUserUsernameIn(usernames)).thenReturn(Set.of(trainer));
 
-        Set<Trainer> result = trainerService.findAll(usernames);
-
-        assertEquals(1, result.size());
-        assertTrue(result.contains(t));
+        assertThrows(EntityNotFoundException.class, () -> trainerService.getAll(usernames));
     }
-
-    @Test
-    void findAllReturnsMultipleMatchingTrainers() {
-        User u1 = user("Jane", "Smith");
-        User u2 = user("Bob", "Jones");
-        Trainer t1 = trainerWithId(u1, 1L);
-        Trainer t2 = trainerWithId(u2, 2L);
-        Set<String> usernames = Set.of("Jane.Smith", "Bob.Jones");
-        when(trainerRepository.findByUserUsernameIn(usernames)).thenReturn(Set.of(t1, t2));
-
-        Set<Trainer> result = trainerService.findAll(usernames);
-
-        assertEquals(2, result.size());
-        assertTrue(result.contains(t1));
-        assertTrue(result.contains(t2));
-    }
-
-    // getNotAssignedTrainers
 
     @Test
     void getNotAssignedTrainersDelegatesToRepository() {
-        when(trainerRepository.findTrainersNotAssignedToTrainee("John.Smith")).thenReturn(Set.of());
+        Set<Trainer> trainers = Set.of(new Trainer(new User("Jane", "Smith"), null));
+        when(trainerRepository.findTrainersNotAssignedToTrainee("John.Smith")).thenReturn(trainers);
 
-        trainerService.getNotAssignedTrainers("John.Smith");
-
-        verify(trainerRepository).findTrainersNotAssignedToTrainee("John.Smith");
-    }
-
-    @Test
-    void getNotAssignedTrainersReturnsResultFromRepository() {
-        User u = user("Jane", "Doe");
-        Trainer t = trainerWithId(u, 99L);
-        when(trainerRepository.findTrainersNotAssignedToTrainee("John.Smith")).thenReturn(Set.of(t));
-
-        Set<Trainer> result = trainerService.getNotAssignedTrainers("John.Smith");
-
-        assertEquals(1, result.size());
-        assertTrue(result.contains(t));
+        assertSame(trainers, trainerService.getNotAssignedTrainers("John.Smith"));
     }
 }

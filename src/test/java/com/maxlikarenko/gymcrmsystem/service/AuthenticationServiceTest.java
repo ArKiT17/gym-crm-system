@@ -7,8 +7,10 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class AuthenticationServiceTest {
 
@@ -32,7 +34,7 @@ class AuthenticationServiceTest {
 
     @Test
     void authenticateThrowsWhenPasswordIsWrong() {
-        User user = new User("John", "Smith", "John.Smith", "correctPass", true);
+        User user = user("John", "Smith", "John.Smith", "correctPass");
         when(userRepository.findByUsername("John.Smith")).thenReturn(Optional.of(user));
 
         assertThrows(IllegalArgumentException.class,
@@ -41,7 +43,7 @@ class AuthenticationServiceTest {
 
     @Test
     void authenticateReturnsTrueOnSuccess() {
-        User user = new User("John", "Smith", "John.Smith", "correctPass", true);
+        User user = user("John", "Smith", "John.Smith", "correctPass");
         when(userRepository.findByUsername("John.Smith")).thenReturn(Optional.of(user));
 
         assertTrue(authenticationService.authenticate("John.Smith", "correctPass"));
@@ -49,10 +51,17 @@ class AuthenticationServiceTest {
 
     @Test
     void authenticateUsesExactPasswordMatch() {
-        User user = new User("John", "Smith", "John.Smith", "Pass1", true);
+        User user = user("John", "Smith", "John.Smith", "Pass1");
         when(userRepository.findByUsername("John.Smith")).thenReturn(Optional.of(user));
 
         assertThrows(IllegalArgumentException.class,
                 () -> authenticationService.authenticate("John.Smith", "pass1"));
+    }
+
+    private User user(String firstName, String lastName, String username, String password) {
+        User user = new User(firstName, lastName);
+        user.setUsername(username);
+        user.setPassword(password);
+        return user;
     }
 }

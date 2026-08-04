@@ -8,7 +8,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.Set;
 
@@ -16,7 +16,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TraineeServiceTest {
-
     private UserAccountService userAccountService;
     private TrainerService trainerService;
     private TraineeRepository traineeRepository;
@@ -33,203 +32,95 @@ class TraineeServiceTest {
         traineeService.setTraineeRepository(traineeRepository);
     }
 
-    private User user(String first, String last) {
-        return new User(first, last, first + "." + last, "pass", true);
-    }
+    @Test
+    void createGeneratesCredentialsAndSavesTrainee() {
+        User user = new User("John", "Smith");
+        Trainee trainee = new Trainee(user, null, null);
+        when(traineeRepository.save(trainee)).thenReturn(trainee);
 
-    private Trainee trainee(User u) {
-        return new Trainee(u, null, null, new HashSet<>(), new HashSet<>());
+        assertSame(trainee, traineeService.create(trainee));
+        verify(userAccountService).generateCredentials(user);
+        verify(traineeRepository).save(trainee);
     }
-
-    // create
 
     @Test
-    void createThrowsForNullTrainee() {
+    void createRejectsNullTrainee() {
         assertThrows(IllegalArgumentException.class, () -> traineeService.create(null));
-        verifyNoInteractions(traineeRepository, userAccountService);
+        verifyNoInteractions(userAccountService, traineeRepository);
     }
 
     @Test
-    void createThrowsWhenUserIsNull() {
-        Trainee t = new Trainee(null, null, null, new HashSet<>(), new HashSet<>());
-        doThrow(new IllegalArgumentException("User cannot be null"))
-                .when(userAccountService).prepareForRegistration(null);
+    void updateChangesTraineeFieldsByUsername() {
+        Trainee trainee = new Trainee(new User("John", "Smith"), null, null);
+        LocalDate birthDate = LocalDate.of(2000, 1, 1);
+        when(traineeRepository.findByUserUsername("John.Smith")).thenReturn(Optional.of(trainee));
 
-        assertThrows(IllegalArgumentException.class, () -> traineeService.create(t));
-        verifyNoInteractions(traineeRepository);
+        Trainee result = traineeService.update(
+                "John.Smith", "Johnny", "Doe", birthDate, "Kyiv", false);
+
+        assertSame(trainee, result);
+        assertAll(
+                () -> assertEquals("Johnny", trainee.getUser().getFirstName()),
+                () -> assertEquals("Doe", trainee.getUser().getLastName()),
+                () -> assertEquals(birthDate, trainee.getDateOfBirth()),
+                () -> assertEquals("Kyiv", trainee.getAddress()),
+                () -> assertFalse(trainee.getUser().isActive())
+        );
     }
 
     @Test
-    void createCallsPrepareForRegistrationOnUser() {
-        User u = user("John", "Smith");
-        Trainee t = trainee(u);
-        when(traineeRepository.save(t)).thenReturn(t);
+    void getByIdAndUsernameReturnTrainee() {
+        Trainee trainee = new Trainee(new User("John", "Smith"), null, null);
+        when(traineeRepository.findById(1L)).thenReturn(Optional.of(trainee));
+        when(traineeRepository.findByUserUsername("John.Smith")).thenReturn(Optional.of(trainee));
 
-        traineeService.create(t);
-
-        verify(userAccountService).prepareForRegistration(u);
+        assertAll(
+                () -> assertSame(trainee, traineeService.get(1L)),
+                () -> assertSame(trainee, traineeService.get("John.Smith"))
+        );
     }
 
     @Test
-    void createSavesAndReturnsTrainee() {
-        User u = user("John", "Smith");
-        Trainee t = trainee(u);
-        when(traineeRepository.save(t)).thenReturn(t);
+    void getThrowsWhenTraineeDoesNotExist() {
+        when(traineeRepository.findById(1L)).thenReturn(Optional.empty());
+        when(traineeRepository.findByUserUsername("missing")).thenReturn(Optional.empty());
 
-        assertSame(t, traineeService.create(t));
-        verify(traineeRepository).save(t);
-    }
-
-    // update
-
-    @Test
-    void updateThrowsForNullTrainee() {
-        assertThrows(IllegalArgumentException.class, () -> traineeService.update(null));
-        verifyNoInteractions(traineeRepository, userAccountService);
+        assertAll(
+                () -> assertThrows(EntityNotFoundException.class, () -> traineeService.get(1L)),
+                () -> assertThrows(EntityNotFoundException.class, () -> traineeService.get("missing"))
+        );
     }
 
     @Test
-    void updateCallsValidateUserOnUser() {
-        User u = user("John", "Smith");
-        Trainee t = trainee(u);
-        when(traineeRepository.save(t)).thenReturn(t);
-
-        traineeService.update(t);
-
-        verify(userAccountService).validateUser(u);
-    }
-
-    @Test
-    void updateDoesNotCallPrepareForRegistration() {
-        User u = user("John", "Smith");
-        Trainee t = trainee(u);
-        when(traineeRepository.save(t)).thenReturn(t);
-
-        traineeService.update(t);
-
-        verify(userAccountService, never()).prepareForRegistration(any());
-    }
-
-    @Test
-    void updateSavesAndReturnsTrainee() {
-        User u = user("John", "Smith");
-        Trainee t = trainee(u);
-        when(traineeRepository.save(t)).thenReturn(t);
-
-        assertSame(t, traineeService.update(t));
-        verify(traineeRepository).save(t);
-    }
-
-    // delete by id
-
-    @Test
-    void deleteByIdThrowsWhenTraineeNotFound() {
-        when(traineeRepository.findById(999L)).thenReturn(Optional.empty());
-        assertThrows(EntityNotFoundException.class, () -> traineeService.delete(999L));
-    }
-
-    @Test
-    void deleteByIdClearsTrainersAndDeletesById() {
-        User u = user("John", "Smith");
-        Trainee t = trainee(u);
-        when(traineeRepository.findById(1L)).thenReturn(Optional.of(t));
+    void deleteByIdClearsTrainersAndDeletesEntity() {
+        Trainee trainee = new Trainee(new User("John", "Smith"), null, null);
+        Trainer trainer = new Trainer(new User("Jane", "Doe"), null);
+        trainee.getTrainers().add(trainer);
+        when(traineeRepository.findById(1L)).thenReturn(Optional.of(trainee));
 
         traineeService.delete(1L);
 
-        assertTrue(t.getTrainers().isEmpty());
+        assertTrue(trainee.getTrainers().isEmpty());
         verify(traineeRepository).deleteById(1L);
-    }
-
-    // delete by username
-
-    @Test
-    void deleteByUsernameThrowsWhenTraineeNotFound() {
-        when(traineeRepository.findByUserUsername("missing")).thenReturn(Optional.empty());
-        assertThrows(EntityNotFoundException.class, () -> traineeService.delete("missing"));
     }
 
     @Test
     void deleteByUsernameClearsTrainersAndDeletesEntity() {
-        User u = user("John", "Smith");
-        Trainee t = trainee(u);
-        when(traineeRepository.findByUserUsername("John.Smith")).thenReturn(Optional.of(t));
+        Trainee trainee = new Trainee(new User("John", "Smith"), null, null);
+        when(traineeRepository.findByUserUsername("John.Smith")).thenReturn(Optional.of(trainee));
 
         traineeService.delete("John.Smith");
 
-        assertTrue(t.getTrainers().isEmpty());
-        verify(traineeRepository).delete(t);
-    }
-
-    // find by id
-
-    @Test
-    void findByIdReturnsPresentWhenFound() {
-        User u = user("John", "Smith");
-        Trainee t = trainee(u);
-        when(traineeRepository.findById(1L)).thenReturn(Optional.of(t));
-
-        assertEquals(Optional.of(t), traineeService.find(1L));
+        verify(traineeRepository).delete(trainee);
     }
 
     @Test
-    void findByIdReturnsEmptyWhenNotFound() {
-        when(traineeRepository.findById(999L)).thenReturn(Optional.empty());
-        assertTrue(traineeService.find(999L).isEmpty());
-    }
+    void updateTrainersReplacesExistingTrainers() {
+        Trainee trainee = new Trainee(new User("John", "Smith"), null, null);
+        Trainer trainer = new Trainer(new User("Jane", "Doe"), null);
+        when(traineeRepository.findByUserUsername("John.Smith")).thenReturn(Optional.of(trainee));
+        when(trainerService.getAll(Set.of("Jane.Doe"))).thenReturn(Set.of(trainer));
 
-    // find by username
-
-    @Test
-    void findByUsernameReturnsPresentWhenFound() {
-        User u = user("John", "Smith");
-        Trainee t = trainee(u);
-        when(traineeRepository.findByUserUsername("John.Smith")).thenReturn(Optional.of(t));
-
-        assertEquals(Optional.of(t), traineeService.find("John.Smith"));
-    }
-
-    @Test
-    void findByUsernameReturnsEmptyWhenNotFound() {
-        when(traineeRepository.findByUserUsername("missing")).thenReturn(Optional.empty());
-        assertTrue(traineeService.find("missing").isEmpty());
-    }
-
-    // updateTrainers
-
-    @Test
-    void updateTrainersThrowsWhenTraineeNotFound() {
-        when(traineeRepository.findByUserUsername("missing")).thenReturn(Optional.empty());
-        assertThrows(EntityNotFoundException.class,
-                () -> traineeService.updateTrainers("missing", Set.of("t1")));
-    }
-
-    @Test
-    void updateTrainersPropagatesEntityNotFoundFromTrainerService() {
-        User u = user("John", "Smith");
-        Trainee t = trainee(u);
-        when(traineeRepository.findByUserUsername("John.Smith")).thenReturn(Optional.of(t));
-        Set<String> names = Set.of("missing.trainer");
-        when(trainerService.findAll(names))
-                .thenThrow(new EntityNotFoundException("Trainer not found: missing.trainer"));
-
-        assertThrows(EntityNotFoundException.class,
-                () -> traineeService.updateTrainers("John.Smith", names));
-    }
-
-    @Test
-    void updateTrainersReplacesTrainerSet() {
-        User u = user("John", "Smith");
-        Trainee t = trainee(u);
-        User trainerUser = new User("Jane", "Doe", "Jane.Doe", "pass", true);
-        Trainer trainer = new Trainer(trainerUser, null, new HashSet<>(), new HashSet<>());
-
-        when(traineeRepository.findByUserUsername("John.Smith")).thenReturn(Optional.of(t));
-        Set<String> names = Set.of("Jane.Doe");
-        when(trainerService.findAll(names)).thenReturn(Set.of(trainer));
-
-        Set<Trainer> result = traineeService.updateTrainers("John.Smith", names);
-
-        assertEquals(1, result.size());
-        assertTrue(result.contains(trainer));
+        assertEquals(Set.of(trainer), traineeService.updateTrainers("John.Smith", Set.of("Jane.Doe")));
     }
 }

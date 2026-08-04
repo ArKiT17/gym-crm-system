@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Optional;
 import java.util.Set;
 
 @Slf4j
@@ -20,7 +19,6 @@ import java.util.Set;
 public class TrainingService {
     private TraineeService traineeService;
     private TrainerService trainerService;
-    private TrainingTypeService trainingTypeService;
     private TrainingRepository trainingRepository;
 
     @Autowired
@@ -38,37 +36,27 @@ public class TrainingService {
         this.trainerService = trainerService;
     }
 
-    @Autowired
-    public void setTrainingTypeService(TrainingTypeService trainingTypeService) {
-        this.trainingTypeService = trainingTypeService;
-    }
-
     @Transactional
-    public Training addTraining(String traineeUsername, String trainerUsername,
-                                String trainingName, String trainingTypeName,
+    public Training addTraining(String traineeUsername, String trainerUsername, String trainingName,
                                 LocalDate date, int duration) {
 
-        if (isBlank(traineeUsername) || isBlank(trainerUsername) || isBlank(trainingName)
-                || isBlank(trainingTypeName) || date == null || duration <= 0) {
-            throw new IllegalArgumentException("Training trainee, trainer, name, type, date and positive duration are required");
+        Trainee trainee = traineeService.get(traineeUsername);
+        Trainer trainer = trainerService.get(trainerUsername);
+        TrainingType trainingType = trainer.getSpecialization();
+        if (trainingType == null) {
+            throw new IllegalStateException("Trainer has no specialization");
         }
 
-        Trainee trainee = traineeService.find(traineeUsername)
-                .orElseThrow(() -> new EntityNotFoundException("Trainee not found: " + traineeUsername));
-        Trainer trainer = trainerService.find(trainerUsername)
-                .orElseThrow(() -> new EntityNotFoundException("Trainer not found: " + trainerUsername));
-        TrainingType type = trainingTypeService.find(trainingTypeName)
-                .orElseThrow(() -> new EntityNotFoundException("Training type not found: " + trainingTypeName));
-
-        Training training = new Training(trainee, trainer, trainingName, type, date, duration);
+        Training training = new Training(trainee, trainer, trainingName, trainingType, date, duration);
 
         log.info("Creating training '{}'", training.getName());
         return trainingRepository.save(training);
     }
 
-    public Optional<Training> find(Long id) {
+    public Training get(Long id) {
         log.debug("Finding training with id {}", id);
-        return trainingRepository.findById(id);
+        return trainingRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Training with id " + id + " not found"));
     }
 
     public Set<Training> getTraineeTrainings(String traineeUsername, LocalDate fromDate, LocalDate toDate,
@@ -78,12 +66,8 @@ public class TrainingService {
     }
 
     public Set<Training> getTrainerTrainings(String trainerUsername, LocalDate fromDate, LocalDate toDate,
-                                              String traineeUsername) {
+                                             String traineeUsername) {
         log.debug("Getting trainings for trainer {}", trainerUsername);
         return trainingRepository.findTrainerTrainings(trainerUsername, fromDate, toDate, traineeUsername);
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
     }
 }
