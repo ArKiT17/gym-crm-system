@@ -129,6 +129,14 @@
                         <goals>
                             <goal>report</goal>
                         </goals>
+                        <configuration>
+                            <includes>
+                                <include>com/maxlikarenko/gymcrmsystem/controller/**</include>
+                                <include>com/maxlikarenko/gymcrmsystem/facade/**</include>
+                                <include>com/maxlikarenko/gymcrmsystem/service/**</include>
+                                <include>com/maxlikarenko/gymcrmsystem/util/**</include>
+                            </includes>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>check</id>
@@ -137,6 +145,12 @@
                             <goal>check</goal>
                         </goals>
                         <configuration>
+                            <includes>
+                                <include>com/maxlikarenko/gymcrmsystem/controller/**</include>
+                                <include>com/maxlikarenko/gymcrmsystem/facade/**</include>
+                                <include>com/maxlikarenko/gymcrmsystem/service/**</include>
+                                <include>com/maxlikarenko/gymcrmsystem/util/**</include>
+                            </includes>
                             <rules>
                                 <rule>
                                     <element>BUNDLE</element>
