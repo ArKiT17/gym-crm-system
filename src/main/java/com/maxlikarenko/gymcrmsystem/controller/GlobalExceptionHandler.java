@@ -119,6 +119,7 @@ public class GlobalExceptionHandler {
     }
 
     private ProblemDetail problem(HttpStatus status, String detail) {
+        log.warn("REST request response: status={} message={}", status.value(), detail);
         return ProblemDetail.forStatusAndDetail(status, detail);
     }
 

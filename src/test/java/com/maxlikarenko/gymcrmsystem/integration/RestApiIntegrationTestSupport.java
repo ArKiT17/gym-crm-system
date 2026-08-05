@@ -2,6 +2,7 @@ package com.maxlikarenko.gymcrmsystem.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.maxlikarenko.gymcrmsystem.config.TransactionLoggingFilter;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,13 +28,17 @@ abstract class RestApiIntegrationTestSupport {
 
     @PersistenceContext
     private EntityManager entityManager;
+    @Autowired
+    private TransactionLoggingFilter transactionLoggingFilter;
 
     protected final ObjectMapper objectMapper = new ObjectMapper();
     protected MockMvc mockMvc;
 
     @BeforeEach
     void setUpMockMvc() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
+                .addFilters(transactionLoggingFilter)
+                .build();
     }
 
     protected void flushAndClear() {

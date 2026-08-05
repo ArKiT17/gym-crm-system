@@ -3,9 +3,15 @@ package com.maxlikarenko.gymcrmsystem.integration;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import java.util.UUID;
+
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -17,7 +23,8 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
         mockMvc.perform(get("/api/auth/login")
                         .param("username", trainee.username())
                         .param("password", trainee.password()))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(header().exists("X-Transaction-Id"));
 
         mockMvc.perform(get("/api/trainees/{username}", trainee.username())
                         .headers(trainee.headers()))
@@ -26,6 +33,27 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
                 .andExpect(jsonPath("$.firstName", is("Rest")))
                 .andExpect(jsonPath("$.lastName", is("Trainee")))
                 .andExpect(jsonPath("$.isActive", is(true)));
+    }
+
+    @Test
+    void generatesAndPropagatesTransactionId() throws Exception {
+        String firstTransactionId = mockMvc.perform(get("/api/training-types"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getHeader("X-Transaction-Id");
+
+        String propagatedTransactionId = UUID.randomUUID().toString();
+        String secondTransactionId = mockMvc.perform(get("/api/training-types")
+                        .header("X-Transaction-Id", propagatedTransactionId))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getHeader("X-Transaction-Id");
+
+        assertTrue(firstTransactionId != null && !firstTransactionId.isBlank());
+        assertEquals(propagatedTransactionId, secondTransactionId);
+        assertNotEquals(firstTransactionId, secondTransactionId);
     }
 
     @Test
