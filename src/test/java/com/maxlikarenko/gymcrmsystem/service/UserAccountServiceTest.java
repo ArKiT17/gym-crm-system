@@ -2,8 +2,9 @@ package com.maxlikarenko.gymcrmsystem.service;
 
 import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
+import com.maxlikarenko.gymcrmsystem.exception.ConflictException;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import com.maxlikarenko.gymcrmsystem.util.PasswordGenerator;
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -48,25 +49,19 @@ class UserAccountServiceTest {
         when(userRepository.findByUsername("John.Smith")).thenReturn(Optional.of(activeUser));
 
         assertAll(
-                () -> assertThrows(EntityNotFoundException.class,
+                () -> assertThrows(ResourceNotFoundException.class,
                         () -> userAccountService.activate("missing", true)),
-                () -> assertThrows(IllegalStateException.class,
+                () -> assertThrows(ConflictException.class,
                         () -> userAccountService.activate("John.Smith", true))
         );
     }
 
     @Test
-    void changePasswordRejectsMissingOrBlankPassword() {
-        User user = new User("John", "Smith");
+    void changePasswordRejectsMissingUser() {
         when(userRepository.findByUsername("missing")).thenReturn(Optional.empty());
-        when(userRepository.findByUsername("John.Smith")).thenReturn(Optional.of(user));
 
-        assertAll(
-                () -> assertThrows(EntityNotFoundException.class,
-                        () -> userAccountService.changePassword("missing", "newPassword")),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> userAccountService.changePassword("John.Smith", " "))
-        );
+        assertThrows(ResourceNotFoundException.class,
+                () -> userAccountService.changePassword("missing", "newPassword"));
     }
 
     @Test

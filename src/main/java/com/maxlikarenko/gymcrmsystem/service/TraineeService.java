@@ -3,7 +3,7 @@ package com.maxlikarenko.gymcrmsystem.service;
 import com.maxlikarenko.gymcrmsystem.model.Trainee;
 import com.maxlikarenko.gymcrmsystem.model.Trainer;
 import com.maxlikarenko.gymcrmsystem.repository.TraineeRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -84,13 +84,13 @@ public class TraineeService {
     public Trainee get(Long id) {
         log.debug("Finding trainee with id {}", id);
         return traineeRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Trainee with id " + id + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Trainee with id " + id + " not found"));
     }
 
     public Trainee get(String username) {
         log.debug("Finding trainee with username {}", username);
         return traineeRepository.findByUserUsername(username)
-                .orElseThrow(() -> new EntityNotFoundException("Trainee with username " + username + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Trainee with username " + username + " not found"));
     }
 
     @Transactional

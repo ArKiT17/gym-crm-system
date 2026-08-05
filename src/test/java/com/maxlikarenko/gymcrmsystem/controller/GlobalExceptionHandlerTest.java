@@ -1,6 +1,8 @@
 package com.maxlikarenko.gymcrmsystem.controller;
 
-import jakarta.persistence.EntityNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.ConflictException;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -121,19 +123,37 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleEntityNotFoundPreservesExceptionMessage() {
-        ProblemDetail problem = handler.handleEntityNotFound(
-                new EntityNotFoundException("Trainee was not found")
+    void handleResourceNotFoundPreservesExceptionMessage() {
+        ProblemDetail problem = handler.handleResourceNotFound(
+                new ResourceNotFoundException("Trainee was not found")
         );
 
         assertProblem(problem, HttpStatus.NOT_FOUND, "Trainee was not found");
     }
 
     @Test
-    void handleEntityNotFoundUsesDefaultMessageWhenMissing() {
-        ProblemDetail problem = handler.handleEntityNotFound(new EntityNotFoundException());
+    void handleResourceNotFoundUsesDefaultMessageWhenMissing() {
+        ProblemDetail problem = handler.handleResourceNotFound(new ResourceNotFoundException(""));
 
         assertProblem(problem, HttpStatus.NOT_FOUND, "Requested entity was not found");
+    }
+
+    @Test
+    void handleUnauthorizedReturnsUnauthorized() {
+        ProblemDetail problem = handler.handleUnauthorized(
+                new UnauthorizedException("Invalid username or password")
+        );
+
+        assertProblem(problem, HttpStatus.UNAUTHORIZED, "Invalid username or password");
+    }
+
+    @Test
+    void handleConflictReturnsConflict() {
+        ProblemDetail problem = handler.handleConflict(
+                new ConflictException("Trainer has no specialization")
+        );
+
+        assertProblem(problem, HttpStatus.CONFLICT, "Trainer has no specialization");
     }
 
     @Test
@@ -143,15 +163,6 @@ class GlobalExceptionHandlerTest {
         );
 
         assertProblem(problem, HttpStatus.BAD_REQUEST, "Invalid username");
-    }
-
-    @Test
-    void handleIllegalStateReturnsConflict() {
-        ProblemDetail problem = handler.handleIllegalState(
-                new IllegalStateException("User is already active")
-        );
-
-        assertProblem(problem, HttpStatus.CONFLICT, "User is already active");
     }
 
     @Test

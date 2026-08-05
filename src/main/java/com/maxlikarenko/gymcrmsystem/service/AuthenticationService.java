@@ -1,5 +1,6 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
+import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
 import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -18,10 +19,10 @@ public class AuthenticationService {
 
     public boolean authenticate(String username, String password) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("Authentication failed: user " + username + " not found"));
+                .orElseThrow(() -> new UnauthorizedException("Invalid username or password"));
         if (!user.getPassword().equals(password)) {
             log.warn("Authentication failed for user {}", username);
-            throw new IllegalArgumentException("Authentication failed: incorrect password");
+            throw new UnauthorizedException("Invalid username or password");
         }
         log.debug("User authentication successful for username {}", username);
         return true;

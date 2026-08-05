@@ -4,7 +4,7 @@ import com.maxlikarenko.gymcrmsystem.model.Trainee;
 import com.maxlikarenko.gymcrmsystem.model.Trainer;
 import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.TraineeRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -86,8 +86,8 @@ class TraineeServiceTest {
         when(traineeRepository.findByUserUsername("missing")).thenReturn(Optional.empty());
 
         assertAll(
-                () -> assertThrows(EntityNotFoundException.class, () -> traineeService.get(1L)),
-                () -> assertThrows(EntityNotFoundException.class, () -> traineeService.get("missing"))
+                () -> assertThrows(ResourceNotFoundException.class, () -> traineeService.get(1L)),
+                () -> assertThrows(ResourceNotFoundException.class, () -> traineeService.get("missing"))
         );
     }
 

@@ -5,7 +5,8 @@ import com.maxlikarenko.gymcrmsystem.model.Trainer;
 import com.maxlikarenko.gymcrmsystem.model.Training;
 import com.maxlikarenko.gymcrmsystem.model.TrainingType;
 import com.maxlikarenko.gymcrmsystem.repository.TrainingRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.ConflictException;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -44,7 +45,7 @@ public class TrainingService {
         Trainer trainer = trainerService.get(trainerUsername);
         TrainingType trainingType = trainer.getSpecialization();
         if (trainingType == null) {
-            throw new IllegalStateException("Trainer has no specialization");
+            throw new ConflictException("Trainer has no specialization");
         }
 
         Training training = new Training(trainee, trainer, trainingName, trainingType, date, duration);
@@ -56,7 +57,7 @@ public class TrainingService {
     public Training get(Long id) {
         log.debug("Finding training with id {}", id);
         return trainingRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Training with id " + id + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Training with id " + id + " not found"));
     }
 
     public Set<Training> getTraineeTrainings(String traineeUsername, LocalDate fromDate, LocalDate toDate,

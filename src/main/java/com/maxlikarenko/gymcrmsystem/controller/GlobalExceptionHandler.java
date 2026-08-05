@@ -1,6 +1,8 @@
 package com.maxlikarenko.gymcrmsystem.controller;
 
-import jakarta.persistence.EntityNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.ConflictException;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -84,19 +86,24 @@ public class GlobalExceptionHandler {
         return problem(HttpStatus.NOT_FOUND, "Resource not found");
     }
 
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ProblemDetail handleEntityNotFound(EntityNotFoundException exception) {
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ProblemDetail handleResourceNotFound(ResourceNotFoundException exception) {
         return problem(HttpStatus.NOT_FOUND, messageOrDefault(exception, "Requested entity was not found"));
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ProblemDetail handleUnauthorized(UnauthorizedException exception) {
+        return problem(HttpStatus.UNAUTHORIZED, messageOrDefault(exception, "Authentication required"));
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ProblemDetail handleConflict(ConflictException exception) {
+        return problem(HttpStatus.CONFLICT, messageOrDefault(exception, "Request conflicts with the current state"));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ProblemDetail handleIllegalArgument(IllegalArgumentException exception) {
         return problem(HttpStatus.BAD_REQUEST, messageOrDefault(exception, "Invalid request"));
-    }
-
-    @ExceptionHandler(IllegalStateException.class)
-    public ProblemDetail handleIllegalState(IllegalStateException exception) {
-        return problem(HttpStatus.CONFLICT, messageOrDefault(exception, "Request conflicts with the current state"));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

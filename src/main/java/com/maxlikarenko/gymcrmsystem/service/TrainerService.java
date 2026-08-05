@@ -2,7 +2,7 @@ package com.maxlikarenko.gymcrmsystem.service;
 
 import com.maxlikarenko.gymcrmsystem.model.Trainer;
 import com.maxlikarenko.gymcrmsystem.repository.TrainerRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -54,13 +54,13 @@ public class TrainerService {
     public Trainer get(Long id) {
         log.debug("Finding trainer with id {}", id);
         return trainerRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Trainer with id " + id + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Trainer with id " + id + " not found"));
     }
 
     public Trainer get(String username) {
         log.debug("Finding trainer with username {}", username);
         return trainerRepository.findByUserUsername(username)
-                .orElseThrow(() -> new EntityNotFoundException("Trainer with username " + username + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Trainer with username " + username + " not found"));
     }
 
     public Set<Trainer> getAll(Set<String> usernames) {
@@ -77,7 +77,7 @@ public class TrainerService {
                     .filter(username -> !foundUsernames.contains(username))
                     .findFirst()
                     .ifPresent(missingUsername -> {
-                        throw new EntityNotFoundException("Trainer with username " + missingUsername + " not found");
+                        throw new ResourceNotFoundException("Trainer with username " + missingUsername + " not found");
                     });
         }
 

@@ -2,7 +2,7 @@ package com.maxlikarenko.gymcrmsystem.service;
 
 import com.maxlikarenko.gymcrmsystem.model.TrainingType;
 import com.maxlikarenko.gymcrmsystem.repository.TrainingTypeRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -47,8 +47,8 @@ class TrainingTypeServiceTest {
         when(trainingTypeRepository.findByName("unknown")).thenReturn(Optional.empty());
 
         assertAll(
-                () -> assertThrows(EntityNotFoundException.class, () -> trainingTypeService.get(1L)),
-                () -> assertThrows(EntityNotFoundException.class, () -> trainingTypeService.get("unknown"))
+                () -> assertThrows(ResourceNotFoundException.class, () -> trainingTypeService.get(1L)),
+                () -> assertThrows(ResourceNotFoundException.class, () -> trainingTypeService.get("unknown"))
         );
     }
 

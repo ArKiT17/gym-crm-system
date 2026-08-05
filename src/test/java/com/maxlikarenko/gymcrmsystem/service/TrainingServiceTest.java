@@ -6,7 +6,8 @@ import com.maxlikarenko.gymcrmsystem.model.Training;
 import com.maxlikarenko.gymcrmsystem.model.TrainingType;
 import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.TrainingRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.ConflictException;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -61,7 +62,7 @@ class TrainingServiceTest {
         when(trainerService.get("Jane.Doe"))
                 .thenReturn(new Trainer(new User("Jane", "Doe"), null));
 
-        assertThrows(IllegalStateException.class,
+        assertThrows(ConflictException.class,
                 () -> trainingService.addTraining(
                         "John.Smith", "Jane.Doe", "Training", LocalDate.now(), 60));
 
@@ -71,9 +72,9 @@ class TrainingServiceTest {
     @Test
     void addTrainingPropagatesMissingTrainee() {
         when(traineeService.get("missing"))
-                .thenThrow(new EntityNotFoundException("Trainee not found"));
+                .thenThrow(new ResourceNotFoundException("Trainee not found"));
 
-        assertThrows(EntityNotFoundException.class,
+        assertThrows(ResourceNotFoundException.class,
                 () -> trainingService.addTraining(
                         "missing", "Jane.Doe", "Training", LocalDate.now(), 60));
 
@@ -88,7 +89,7 @@ class TrainingServiceTest {
 
         assertAll(
                 () -> assertSame(training, trainingService.get(1L)),
-                () -> assertThrows(EntityNotFoundException.class, () -> trainingService.get(2L))
+                () -> assertThrows(ResourceNotFoundException.class, () -> trainingService.get(2L))
         );
     }
 

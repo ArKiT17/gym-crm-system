@@ -3,7 +3,7 @@ package com.maxlikarenko.gymcrmsystem.service;
 import com.maxlikarenko.gymcrmsystem.model.Trainer;
 import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.TrainerRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -77,8 +77,8 @@ class TrainerServiceTest {
         when(trainerRepository.findByUserUsername("missing")).thenReturn(Optional.empty());
 
         assertAll(
-                () -> assertThrows(EntityNotFoundException.class, () -> trainerService.get(1L)),
-                () -> assertThrows(EntityNotFoundException.class, () -> trainerService.get("missing"))
+                () -> assertThrows(ResourceNotFoundException.class, () -> trainerService.get(1L)),
+                () -> assertThrows(ResourceNotFoundException.class, () -> trainerService.get("missing"))
         );
     }
 
@@ -88,7 +88,7 @@ class TrainerServiceTest {
         Set<String> usernames = Set.of("Jane.Smith", "missing");
         when(trainerRepository.findByUserUsernameIn(usernames)).thenReturn(Set.of(trainer));
 
-        assertThrows(EntityNotFoundException.class, () -> trainerService.getAll(usernames));
+        assertThrows(ResourceNotFoundException.class, () -> trainerService.getAll(usernames));
     }
 
     @Test

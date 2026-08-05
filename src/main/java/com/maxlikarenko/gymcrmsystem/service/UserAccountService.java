@@ -2,8 +2,9 @@ package com.maxlikarenko.gymcrmsystem.service;
 
 import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
+import com.maxlikarenko.gymcrmsystem.exception.ConflictException;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import com.maxlikarenko.gymcrmsystem.util.PasswordGenerator;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,10 +29,10 @@ public class UserAccountService {
     @Transactional
     public void activate(String username, boolean activated) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
         if (user.isActive() == activated) {
             log.warn("Activation failed for user {}", username);
-            throw new IllegalStateException("User " + username + " is already " + (activated ? "active" : "inactive"));
+            throw new ConflictException("User " + username + " is already " + (activated ? "active" : "inactive"));
         }
         user.setActive(activated);
         log.info("{} user {}", activated ? "Activated" : "Deactivated", username);
@@ -40,7 +41,7 @@ public class UserAccountService {
     @Transactional
     public void changePassword(String username, String newPassword) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
         user.setPassword(newPassword);
         log.info("Password changed for user {}", username);
     }
