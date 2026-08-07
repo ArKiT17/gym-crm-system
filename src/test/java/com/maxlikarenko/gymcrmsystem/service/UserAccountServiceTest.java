@@ -4,6 +4,7 @@ import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
 import com.maxlikarenko.gymcrmsystem.exception.ConflictException;
 import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
 import com.maxlikarenko.gymcrmsystem.util.PasswordGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,17 +62,31 @@ class UserAccountServiceTest {
         when(userRepository.findByUsername("missing")).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
-                () -> userAccountService.changePassword("missing", "newPassword"));
+                () -> userAccountService.changePassword("missing", "oldPassword", "newPassword"));
     }
 
     @Test
     void changePasswordUpdatesExistingUser() {
         User user = new User("John", "Smith");
+        user.setPassword("oldPassword");
         when(userRepository.findByUsername("John.Smith")).thenReturn(Optional.of(user));
 
-        userAccountService.changePassword("John.Smith", "newPassword");
+        userAccountService.changePassword("John.Smith", "oldPassword", "newPassword");
 
         assertEquals("newPassword", user.getPassword());
+    }
+
+    @Test
+    void changePasswordRejectsIncorrectOldPassword() {
+        User user = new User("John", "Smith");
+        user.setPassword("actualPassword");
+        when(userRepository.findByUsername("John.Smith")).thenReturn(Optional.of(user));
+
+        assertThrows(UnauthorizedException.class,
+                () -> userAccountService.changePassword(
+                        "John.Smith", "wrongPassword", "newPassword"));
+
+        assertEquals("actualPassword", user.getPassword());
     }
 
     @Test

@@ -51,7 +51,7 @@ class AccountFacadeTest {
 
         accountFacade.changePassword("John.Smith", request);
 
-        verify(userAccountService).changePassword("John.Smith", "new");
+        verify(userAccountService).changePassword("John.Smith", "old", "new");
         verifyNoInteractions(authenticationService);
     }
 

@@ -26,7 +26,7 @@ public class AccountFacade {
 
     public void changePassword(String username, ChangeLoginRequest request) {
         log.info("Facade request to change password for user {}", username);
-        userAccountService.changePassword(username, request.newPassword());
+        userAccountService.changePassword(username, request.oldPassword(), request.newPassword());
     }
 
     public void activateUser(String username, boolean activated) {

@@ -1,5 +1,6 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
+import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
 import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
 import com.maxlikarenko.gymcrmsystem.exception.ConflictException;
@@ -39,9 +40,11 @@ public class UserAccountService {
     }
 
     @Transactional
-    public void changePassword(String username, String newPassword) {
+    public void changePassword(String username, String oldPassword, String newPassword) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+
+        checkPassword(oldPassword, user.getPassword());
         user.setPassword(newPassword);
         log.info("Password changed for user {}", username);
     }
@@ -62,5 +65,12 @@ public class UserAccountService {
         }
 
         return candidate;
+    }
+
+    private void checkPassword(String enteredPassword, String actualPassword) {
+        if (!enteredPassword.equals(actualPassword)) {
+            log.warn("User entered a wrong password");
+            throw new UnauthorizedException("Current password is invalid");
+        }
     }
 }
