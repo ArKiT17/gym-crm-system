@@ -86,9 +86,19 @@ class TrainerServiceTest {
     void getAllRejectsMissingTrainer() {
         Trainer trainer = new Trainer(new User("Jane", "Smith"), null);
         Set<String> usernames = Set.of("Jane.Smith", "missing");
-        when(trainerRepository.findByUserUsernameIn(usernames)).thenReturn(Set.of(trainer));
+        when(trainerRepository.findByUserActiveTrueAndUserUsernameIn(usernames)).thenReturn(Set.of(trainer));
 
-        assertThrows(ResourceNotFoundException.class, () -> trainerService.getAll(usernames));
+        assertThrows(ResourceNotFoundException.class, () -> trainerService.getActiveByUsernames(usernames));
+    }
+
+    @Test
+    void getAllRejectsInactiveTrainer() {
+        Trainer trainer = new Trainer(new User("Jane", "Smith"), null);
+        trainer.getUser().setActive(false);
+        Set<String> usernames = Set.of("Jane.Smith");
+        when(trainerRepository.findByUserActiveTrueAndUserUsernameIn(usernames)).thenReturn(Set.of());
+
+        assertThrows(ResourceNotFoundException.class, () -> trainerService.getActiveByUsernames(usernames));
     }
 
     @Test

@@ -63,9 +63,9 @@ public class TrainerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Trainer with username " + username + " not found"));
     }
 
-    public Set<Trainer> getAll(Set<String> usernames) {
+    public Set<Trainer> getActiveByUsernames(Set<String> usernames) {
         log.debug("Finding trainers with usernames {}", usernames);
-        Set<Trainer> trainers = trainerRepository.findByUserUsernameIn(usernames);
+        Set<Trainer> trainers = trainerRepository.findByUserActiveTrueAndUserUsernameIn(usernames);
         log.debug("Found {} trainers", trainers.size());
 
         if (trainers.size() != usernames.size()) {

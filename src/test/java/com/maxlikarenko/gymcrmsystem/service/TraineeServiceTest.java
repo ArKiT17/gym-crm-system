@@ -119,7 +119,7 @@ class TraineeServiceTest {
         Trainee trainee = new Trainee(new User("John", "Smith"), null, null);
         Trainer trainer = new Trainer(new User("Jane", "Doe"), null);
         when(traineeRepository.findByUserUsername("John.Smith")).thenReturn(Optional.of(trainee));
-        when(trainerService.getAll(Set.of("Jane.Doe"))).thenReturn(Set.of(trainer));
+        when(trainerService.getActiveByUsernames(Set.of("Jane.Doe"))).thenReturn(Set.of(trainer));
 
         assertEquals(Set.of(trainer), traineeService.updateTrainers("John.Smith", Set.of("Jane.Doe")));
     }

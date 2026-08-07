@@ -42,7 +42,13 @@ public class TrainingService {
                                 LocalDate date, int duration) {
 
         Trainee trainee = traineeService.get(traineeUsername);
+        if (!trainee.getUser().isActive()) {
+            throw new ConflictException("Inactive trainee cannot have trainings");
+        }
         Trainer trainer = trainerService.get(trainerUsername);
+        if (!trainer.getUser().isActive()) {
+            throw new ConflictException("Inactive trainer cannot conduct trainings");
+        }
         TrainingType trainingType = trainer.getSpecialization();
         if (trainingType == null) {
             throw new ConflictException("Trainer has no specialization");

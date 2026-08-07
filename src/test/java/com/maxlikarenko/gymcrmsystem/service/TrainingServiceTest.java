@@ -70,6 +70,38 @@ class TrainingServiceTest {
     }
 
     @Test
+    void addTrainingRejectsInactiveTrainee() {
+        User traineeUser = new User("John", "Smith");
+        traineeUser.setActive(false);
+        when(traineeService.get("John.Smith"))
+                .thenReturn(new Trainee(traineeUser, null, null));
+        when(trainerService.get("Jane.Doe"))
+                .thenReturn(new Trainer(new User("Jane", "Doe"), new TrainingType("yoga")));
+
+        assertThrows(ConflictException.class,
+                () -> trainingService.addTraining(
+                        "John.Smith", "Jane.Doe", "Training", LocalDate.now(), 60));
+
+        verifyNoInteractions(trainingRepository);
+    }
+
+    @Test
+    void addTrainingRejectsInactiveTrainer() {
+        User trainerUser = new User("Jane", "Doe");
+        trainerUser.setActive(false);
+        when(traineeService.get("John.Smith"))
+                .thenReturn(new Trainee(new User("John", "Smith"), null, null));
+        when(trainerService.get("Jane.Doe"))
+                .thenReturn(new Trainer(trainerUser, new TrainingType("yoga")));
+
+        assertThrows(ConflictException.class,
+                () -> trainingService.addTraining(
+                        "John.Smith", "Jane.Doe", "Training", LocalDate.now(), 60));
+
+        verifyNoInteractions(trainingRepository);
+    }
+
+    @Test
     void addTrainingPropagatesMissingTrainee() {
         when(traineeService.get("missing"))
                 .thenThrow(new ResourceNotFoundException("Trainee not found"));

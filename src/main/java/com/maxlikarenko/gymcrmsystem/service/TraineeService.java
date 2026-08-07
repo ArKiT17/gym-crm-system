@@ -96,7 +96,7 @@ public class TraineeService {
     @Transactional
     public Set<Trainer> updateTrainers(String username, Set<String> trainerUsernames) {
         Trainee trainee = get(username);
-        Set<Trainer> newTrainers = trainerService.getAll(trainerUsernames);
+        Set<Trainer> newTrainers = trainerService.getActiveByUsernames(trainerUsernames);
 
         trainee.getTrainers().clear();
         trainee.getTrainers().addAll(newTrainers);

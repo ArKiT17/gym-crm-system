@@ -61,6 +61,16 @@ class AuthenticationServiceTest {
                 () -> authenticationService.authenticate("John.Smith", "pass1"));
     }
 
+    @Test
+    void authenticateRejectsInactiveUser() {
+        User user = user("John", "Smith", "John.Smith", "correctPass");
+        user.setActive(false);
+        when(userRepository.findByUsername("John.Smith")).thenReturn(Optional.of(user));
+
+        assertThrows(UnauthorizedException.class,
+                () -> authenticationService.authenticate("John.Smith", "correctPass"));
+    }
+
     private User user(String firstName, String lastName, String username, String password) {
         User user = new User(firstName, lastName);
         user.setUsername(username);
