@@ -3,13 +3,13 @@ package com.maxlikarenko.gymcrmsystem.service;
 import com.maxlikarenko.gymcrmsystem.model.Trainee;
 import com.maxlikarenko.gymcrmsystem.model.Trainer;
 import com.maxlikarenko.gymcrmsystem.repository.TraineeRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import java.time.LocalDate;
 import java.util.Set;
 
 @Slf4j
@@ -40,27 +40,30 @@ public class TraineeService {
             throw new IllegalArgumentException("Trainee cannot be null");
         }
 
-        userAccountService.prepareForRegistration(trainee.getUser());
+        userAccountService.generateCredentials(trainee.getUser());
 
         log.info("Creating trainee with username {}", trainee.getUser().getUsername());
         return traineeRepository.save(trainee);
     }
 
     @Transactional
-    public Trainee update(Trainee trainee) {
-        if (trainee == null) {
-            throw new IllegalArgumentException("Trainee cannot be null");
-        }
-        userAccountService.validateUser(trainee.getUser());
+    public Trainee update(String username, String firstName, String lastName,
+                          LocalDate dateOfBirth, String address, boolean isActive) {
+        log.info("Updating trainee with username {}", username);
 
-        log.info("Updating trainee with username {}", trainee.getUser().getUsername());
-        return traineeRepository.save(trainee);
+        Trainee trainee = get(username);
+        trainee.getUser().setFirstName(firstName);
+        trainee.getUser().setLastName(lastName);
+        trainee.setDateOfBirth(dateOfBirth);
+        trainee.setAddress(address);
+        trainee.getUser().setActive(isActive);
+
+        return trainee;
     }
 
     @Transactional
     public void delete(Long id) {
-        Trainee trainee = find(id)
-                .orElseThrow(() -> new EntityNotFoundException("Trainee with id " + id + " not found"));
+        Trainee trainee = get(id);
         log.info("Deleting trainee with id {}", id);
 
         trainee.getTrainers().clear();
@@ -70,8 +73,7 @@ public class TraineeService {
 
     @Transactional
     public void delete(String username) {
-        Trainee trainee = find(username)
-                .orElseThrow(() -> new EntityNotFoundException("Trainee not found: " + username));
+        Trainee trainee = get(username);
         log.info("Deleting trainee with username {}", username);
 
         trainee.getTrainers().clear();
@@ -79,21 +81,22 @@ public class TraineeService {
         traineeRepository.delete(trainee);
     }
 
-    public Optional<Trainee> find(Long id) {
+    public Trainee get(Long id) {
         log.debug("Finding trainee with id {}", id);
-        return traineeRepository.findById(id);
+        return traineeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Trainee with id " + id + " not found"));
     }
 
-    public Optional<Trainee> find(String username) {
+    public Trainee get(String username) {
         log.debug("Finding trainee with username {}", username);
-        return traineeRepository.findByUserUsername(username);
+        return traineeRepository.findByUserUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Trainee with username " + username + " not found"));
     }
 
     @Transactional
     public Set<Trainer> updateTrainers(String username, Set<String> trainerUsernames) {
-        Trainee trainee = find(username)
-                .orElseThrow(() -> new EntityNotFoundException("Trainee not found: " + username));
-        Set<Trainer> newTrainers = trainerService.findAll(trainerUsernames);
+        Trainee trainee = get(username);
+        Set<Trainer> newTrainers = trainerService.getActiveByUsernames(trainerUsernames);
 
         trainee.getTrainers().clear();
         trainee.getTrainers().addAll(newTrainers);

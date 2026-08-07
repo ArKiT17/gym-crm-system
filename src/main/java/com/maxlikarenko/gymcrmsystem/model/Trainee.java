@@ -40,11 +40,9 @@ public class Trainee {
     )
     private Set<Trainer> trainers = new HashSet<>();
 
-    public Trainee(User user, LocalDate dateOfBirth, String address, Set<Training> trainings, Set<Trainer> trainers) {
+    public Trainee(User user, LocalDate dateOfBirth, String address) {
         this.user = user;
         this.dateOfBirth = dateOfBirth;
         this.address = address;
-        this.trainings = trainings;
-        this.trainers = trainers;
     }
 }

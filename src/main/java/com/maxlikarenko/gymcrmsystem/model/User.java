@@ -30,11 +30,9 @@ public class User {
     @Column(name = "is_active", nullable = false)
     private boolean active;
 
-    public User(String firstName, String lastName, String username, String password, boolean active) {
+    public User(String firstName, String lastName) {
         this.firstName = firstName;
         this.lastName = lastName;
-        this.username = username;
-        this.password = password;
-        this.active = active;
+        this.active = true;
     }
 }
