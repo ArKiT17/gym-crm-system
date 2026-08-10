@@ -13,7 +13,7 @@ import java.util.List;
 @Component
 public class TrainingTypeInitializer {
 
-    private static final List<String> TRAINING_TYPES = List.of(
+    public static final List<String> REQUIRED_TRAINING_TYPES = List.of(
             "fitness", "yoga", "zumba", "stretching", "resistance"
     );
 
@@ -26,7 +26,7 @@ public class TrainingTypeInitializer {
 
     @PostConstruct
     public void init() {
-        for (String name : TRAINING_TYPES) {
+        for (String name : REQUIRED_TRAINING_TYPES) {
             if (trainingTypeRepository.findByName(name).isEmpty()) {
                 trainingTypeRepository.save(new TrainingType(name));
                 log.info("Seeded training type: {}", name);

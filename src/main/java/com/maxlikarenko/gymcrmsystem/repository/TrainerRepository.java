@@ -12,6 +12,8 @@ public interface TrainerRepository extends JpaRepository<Trainer, Long> {
 
     Set<Trainer> findByUserActiveTrueAndUserUsernameIn(Set<String> usernames);
 
+    Integer countByUserActiveTrue();
+
     @Query("""
         SELECT tr FROM Trainer tr
         WHERE tr.user.active = true
