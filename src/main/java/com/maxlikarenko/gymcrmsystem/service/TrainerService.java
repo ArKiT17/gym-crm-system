@@ -1,10 +1,9 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import com.maxlikarenko.gymcrmsystem.model.Trainer;
 import com.maxlikarenko.gymcrmsystem.repository.TrainerRepository;
-import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,16 +13,11 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class TrainerService {
-    private UserAccountService userAccountService;
-    private TrainerRepository trainerRepository;
+    private final UserAccountService userAccountService;
+    private final TrainerRepository trainerRepository;
 
-    @Autowired
-    public void setUserAccountService(UserAccountService userAccountService) {
+    public TrainerService(UserAccountService userAccountService, TrainerRepository trainerRepository) {
         this.userAccountService = userAccountService;
-    }
-
-    @Autowired
-    public void setTrainerRepository(TrainerRepository trainerRepository) {
         this.trainerRepository = trainerRepository;
     }
 

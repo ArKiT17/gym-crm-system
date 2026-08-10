@@ -4,7 +4,6 @@ import com.maxlikarenko.gymcrmsystem.model.TrainingType;
 import com.maxlikarenko.gymcrmsystem.repository.TrainingTypeRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -17,10 +16,9 @@ public class TrainingTypeInitializer {
             "fitness", "yoga", "zumba", "stretching", "resistance"
     );
 
-    private TrainingTypeRepository trainingTypeRepository;
+    private final TrainingTypeRepository trainingTypeRepository;
 
-    @Autowired
-    public void setTrainingTypeRepository(TrainingTypeRepository trainingTypeRepository) {
+    public TrainingTypeInitializer(TrainingTypeRepository trainingTypeRepository) {
         this.trainingTypeRepository = trainingTypeRepository;
     }
 

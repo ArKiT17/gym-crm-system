@@ -1,29 +1,23 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
+import com.maxlikarenko.gymcrmsystem.exception.ConflictException;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
 import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
-import com.maxlikarenko.gymcrmsystem.exception.ConflictException;
-import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import com.maxlikarenko.gymcrmsystem.util.PasswordGenerator;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
 public class UserAccountService {
-    private UserRepository userRepository;
-    private PasswordGenerator passwordGenerator;
+    private final UserRepository userRepository;
+    private final PasswordGenerator passwordGenerator;
 
-    @Autowired
-    public void setUserRepository(UserRepository userRepository) {
+    public UserAccountService(UserRepository userRepository, PasswordGenerator passwordGenerator) {
         this.userRepository = userRepository;
-    }
-
-    @Autowired
-    public void setPasswordGenerator(PasswordGenerator passwordGenerator) {
         this.passwordGenerator = passwordGenerator;
     }
 

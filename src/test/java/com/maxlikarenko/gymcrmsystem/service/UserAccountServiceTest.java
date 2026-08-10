@@ -23,9 +23,7 @@ class UserAccountServiceTest {
     void setUp() {
         userRepository = mock(UserRepository.class);
         passwordGenerator = mock(PasswordGenerator.class);
-        userAccountService = new UserAccountService();
-        userAccountService.setUserRepository(userRepository);
-        userAccountService.setPasswordGenerator(passwordGenerator);
+        userAccountService = new UserAccountService(userRepository, passwordGenerator);
     }
 
     @Test

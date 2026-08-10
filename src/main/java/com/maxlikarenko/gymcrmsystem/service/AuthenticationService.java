@@ -4,16 +4,14 @@ import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
 import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 public class AuthenticationService {
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    public void setUserRepository(UserRepository userRepository) {
+    public AuthenticationService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 

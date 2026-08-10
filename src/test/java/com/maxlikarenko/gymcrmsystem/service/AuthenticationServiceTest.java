@@ -1,16 +1,14 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
+import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
 import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
-import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -22,8 +20,7 @@ class AuthenticationServiceTest {
     @BeforeEach
     void setUp() {
         userRepository = mock(UserRepository.class);
-        authenticationService = new AuthenticationService();
-        authenticationService.setUserRepository(userRepository);
+        authenticationService = new AuthenticationService(userRepository);
     }
 
     @Test

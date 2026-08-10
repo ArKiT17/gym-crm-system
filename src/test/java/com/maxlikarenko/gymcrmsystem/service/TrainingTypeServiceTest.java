@@ -1,8 +1,8 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import com.maxlikarenko.gymcrmsystem.model.TrainingType;
 import com.maxlikarenko.gymcrmsystem.repository.TrainingTypeRepository;
-import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -11,7 +11,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TrainingTypeServiceTest {
     private TrainingTypeRepository trainingTypeRepository;
@@ -20,8 +21,7 @@ class TrainingTypeServiceTest {
     @BeforeEach
     void setUp() {
         trainingTypeRepository = mock(TrainingTypeRepository.class);
-        trainingTypeService = new TrainingTypeService();
-        trainingTypeService.setTrainingTypeRepository(trainingTypeRepository);
+        trainingTypeService = new TrainingTypeService(trainingTypeRepository);
     }
 
     @Test

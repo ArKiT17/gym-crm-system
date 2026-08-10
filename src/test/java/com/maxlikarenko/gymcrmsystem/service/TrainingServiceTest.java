@@ -30,10 +30,7 @@ class TrainingServiceTest {
         traineeService = mock(TraineeService.class);
         trainerService = mock(TrainerService.class);
         trainingRepository = mock(TrainingRepository.class);
-        trainingService = new TrainingService();
-        trainingService.setTraineeService(traineeService);
-        trainingService.setTrainerService(trainerService);
-        trainingService.setTrainingRepository(trainingRepository);
+        trainingService = new TrainingService(traineeService, trainerService, trainingRepository);
     }
 
     @Test
