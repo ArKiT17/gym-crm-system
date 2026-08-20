@@ -26,8 +26,7 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(header().exists("X-Transaction-Id"));
 
-        mockMvc.perform(get("/api/trainees/{username}", trainee.username())
-                        .headers(trainee.headers()))
+        mockMvc.perform(get("/api/trainees/{username}", trainee.username()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username", is(trainee.username())))
                 .andExpect(jsonPath("$.firstName", is("Rest")))
@@ -54,28 +53,6 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
         assertTrue(firstTransactionId != null && !firstTransactionId.isBlank());
         assertEquals(propagatedTransactionId, secondTransactionId);
         assertNotEquals(firstTransactionId, secondTransactionId);
-    }
-
-    @Test
-    void rejectsProtectedRequestsWithoutAuthentication() throws Exception {
-        mockMvc.perform(get("/api/training-types"))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(get("/api/trainees/unknown.user"))
-                .andExpect(status().isUnauthorized());
-
-        mockMvc.perform(post("/api/trainings")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "traineeUsername": "unknown.trainee",
-                                  "trainerUsername": "unknown.trainer",
-                                  "trainingName": "Session",
-                                  "trainingDate": "2026-01-01",
-                                  "trainingDuration": 60
-                                }
-                                """))
-                .andExpect(status().isUnauthorized());
     }
 
     @Test

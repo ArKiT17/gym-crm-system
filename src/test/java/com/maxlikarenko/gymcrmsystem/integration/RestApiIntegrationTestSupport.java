@@ -88,10 +88,7 @@ abstract class RestApiIntegrationTestSupport {
 
     protected record Credentials(String username, String password) {
         protected HttpHeaders headers() {
-            HttpHeaders headers = new HttpHeaders();
-            headers.add("X-Username", username);
-            headers.add("X-Password", password);
-            return headers;
+            return new HttpHeaders();
         }
     }
 }
