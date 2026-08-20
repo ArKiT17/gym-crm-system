@@ -1,35 +1,33 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
 import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
-import com.maxlikarenko.gymcrmsystem.model.User;
-import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.util.Optional;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
 
 class AuthenticationServiceTest {
 
-    private UserRepository userRepository;
+    private AuthenticationManager authenticationManager;
     private AuthenticationService authenticationService;
-    private PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void setUp() {
-        userRepository = mock(UserRepository.class);
-        passwordEncoder = new BCryptPasswordEncoder();
-        authenticationService = new AuthenticationService(userRepository, passwordEncoder);
+        authenticationManager = mock(AuthenticationManager.class);
+        authenticationService = new AuthenticationService(authenticationManager);
     }
 
     @Test
     void authenticateThrowsWhenUserNotFound() {
-        when(userRepository.findByUsername("missing")).thenReturn(Optional.empty());
+        doThrow(new BadCredentialsException("Invalid username or password"))
+                .when(authenticationManager).authenticate(any(Authentication.class));
 
         assertThrows(UnauthorizedException.class,
                 () -> authenticationService.authenticate("missing", "anyPass"));
@@ -37,8 +35,8 @@ class AuthenticationServiceTest {
 
     @Test
     void authenticateThrowsWhenPasswordIsWrong() {
-        User user = user("John", "Smith", "John.Smith", "correctPass");
-        when(userRepository.findByUsername("John.Smith")).thenReturn(Optional.of(user));
+        doThrow(new BadCredentialsException("Invalid username or password"))
+                .when(authenticationManager).authenticate(any(Authentication.class));
 
         UnauthorizedException exception = assertThrows(UnauthorizedException.class,
                 () -> authenticationService.authenticate("John.Smith", "wrongPass"));
@@ -47,16 +45,15 @@ class AuthenticationServiceTest {
 
     @Test
     void authenticateReturnsTrueOnSuccess() {
-        User user = user("John", "Smith", "John.Smith", "correctPass");
-        when(userRepository.findByUsername("John.Smith")).thenReturn(Optional.of(user));
+        when(authenticationManager.authenticate(any(Authentication.class))).thenReturn(null);
 
         assertTrue(authenticationService.authenticate("John.Smith", "correctPass"));
     }
 
     @Test
     void authenticateUsesExactPasswordMatch() {
-        User user = user("John", "Smith", "John.Smith", "Pass1");
-        when(userRepository.findByUsername("John.Smith")).thenReturn(Optional.of(user));
+        doThrow(new BadCredentialsException("Invalid username or password"))
+                .when(authenticationManager).authenticate(any(Authentication.class));
 
         assertThrows(UnauthorizedException.class,
                 () -> authenticationService.authenticate("John.Smith", "pass1"));
@@ -64,18 +61,10 @@ class AuthenticationServiceTest {
 
     @Test
     void authenticateRejectsInactiveUser() {
-        User user = user("John", "Smith", "John.Smith", "correctPass");
-        user.setActive(false);
-        when(userRepository.findByUsername("John.Smith")).thenReturn(Optional.of(user));
+        doThrow(new BadCredentialsException("User is disabled"))
+                .when(authenticationManager).authenticate(any(Authentication.class));
 
         assertThrows(UnauthorizedException.class,
                 () -> authenticationService.authenticate("John.Smith", "correctPass"));
-    }
-
-    private User user(String firstName, String lastName, String username, String password) {
-        User user = new User(firstName, lastName);
-        user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(password));
-        return user;
     }
 }
