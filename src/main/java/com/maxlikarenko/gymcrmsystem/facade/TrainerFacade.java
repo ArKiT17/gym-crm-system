@@ -1,5 +1,6 @@
 package com.maxlikarenko.gymcrmsystem.facade;
 
+import com.maxlikarenko.gymcrmsystem.account.RegistrationCredentials;
 import com.maxlikarenko.gymcrmsystem.dto.request.trainer.TrainerProfileUpdateRequest;
 import com.maxlikarenko.gymcrmsystem.dto.request.trainer.TrainerRegistrationRequest;
 import com.maxlikarenko.gymcrmsystem.dto.request.trainer.TrainerTrainingsQuery;
@@ -43,8 +44,8 @@ public class TrainerFacade {
     public CredentialsResponse create(TrainerRegistrationRequest request) {
         log.info("Facade request to create trainer");
         TrainingType specialization = trainingTypeService.get(request.specializationId());
-        Trainer created = trainerService.create(trainerMapper.toEntity(request, specialization));
-        return new CredentialsResponse(created.getUser().getUsername(), created.getUser().getPassword());
+        RegistrationCredentials credentials = trainerService.create(trainerMapper.toEntity(request, specialization));
+        return new CredentialsResponse(credentials.username(), credentials.rawPassword());
     }
 
     public TrainerProfileResponse update(String username, TrainerProfileUpdateRequest request) {

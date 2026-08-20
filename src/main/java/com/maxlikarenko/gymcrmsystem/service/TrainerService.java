@@ -1,6 +1,7 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
 import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
+import com.maxlikarenko.gymcrmsystem.account.RegistrationCredentials;
 import com.maxlikarenko.gymcrmsystem.model.Trainer;
 import com.maxlikarenko.gymcrmsystem.repository.TrainerRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -16,21 +17,23 @@ public class TrainerService {
     private final UserAccountService userAccountService;
     private final TrainerRepository trainerRepository;
 
-    public TrainerService(UserAccountService userAccountService, TrainerRepository trainerRepository) {
+    public TrainerService(UserAccountService userAccountService,
+                          TrainerRepository trainerRepository) {
         this.userAccountService = userAccountService;
         this.trainerRepository = trainerRepository;
     }
 
     @Transactional
-    public Trainer create(Trainer trainer) {
+    public RegistrationCredentials create(Trainer trainer) {
         if (trainer == null) {
             throw new IllegalArgumentException("Trainer cannot be null");
         }
 
-        userAccountService.generateCredentials(trainer.getUser());
+        RegistrationCredentials credentials = userAccountService.generateCredentials(trainer.getUser());
 
-        log.info("Creating trainer with username {}", trainer.getUser().getUsername());
-        return trainerRepository.save(trainer);
+        trainerRepository.save(trainer);
+        log.info("Creating trainer with username {}", credentials.username());
+        return credentials;
     }
 
     @Transactional

@@ -5,6 +5,8 @@ import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
@@ -16,11 +18,13 @@ class AuthenticationServiceTest {
 
     private UserRepository userRepository;
     private AuthenticationService authenticationService;
+    private PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void setUp() {
         userRepository = mock(UserRepository.class);
-        authenticationService = new AuthenticationService(userRepository);
+        passwordEncoder = new BCryptPasswordEncoder();
+        authenticationService = new AuthenticationService(userRepository, passwordEncoder);
     }
 
     @Test
@@ -71,7 +75,7 @@ class AuthenticationServiceTest {
     private User user(String firstName, String lastName, String username, String password) {
         User user = new User(firstName, lastName);
         user.setUsername(username);
-        user.setPassword(password);
+        user.setPassword(passwordEncoder.encode(password));
         return user;
     }
 }

@@ -1,13 +1,16 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
-import com.maxlikarenko.gymcrmsystem.model.User;
-import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
+import com.maxlikarenko.gymcrmsystem.account.RegistrationCredentials;
 import com.maxlikarenko.gymcrmsystem.exception.ConflictException;
 import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
+import com.maxlikarenko.gymcrmsystem.model.User;
+import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
 import com.maxlikarenko.gymcrmsystem.util.PasswordGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
@@ -18,12 +21,14 @@ class UserAccountServiceTest {
     private UserRepository userRepository;
     private PasswordGenerator passwordGenerator;
     private UserAccountService userAccountService;
+    private PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void setUp() {
         userRepository = mock(UserRepository.class);
         passwordGenerator = mock(PasswordGenerator.class);
-        userAccountService = new UserAccountService(userRepository, passwordGenerator);
+        passwordEncoder = new BCryptPasswordEncoder();
+        userAccountService = new UserAccountService(userRepository, passwordGenerator, passwordEncoder);
     }
 
     @Test
@@ -66,25 +71,26 @@ class UserAccountServiceTest {
     @Test
     void changePasswordUpdatesExistingUser() {
         User user = new User("John", "Smith");
-        user.setPassword("oldPassword");
+        user.setPassword(passwordEncoder.encode("oldPassword"));
         when(userRepository.findByUsername("John.Smith")).thenReturn(Optional.of(user));
 
         userAccountService.changePassword("John.Smith", "oldPassword", "newPassword");
 
-        assertEquals("newPassword", user.getPassword());
+        assertTrue(passwordEncoder.matches("newPassword", user.getPassword()));
+        assertNotEquals("newPassword", user.getPassword());
     }
 
     @Test
     void changePasswordRejectsIncorrectOldPassword() {
         User user = new User("John", "Smith");
-        user.setPassword("actualPassword");
+        user.setPassword(passwordEncoder.encode("actualPassword"));
         when(userRepository.findByUsername("John.Smith")).thenReturn(Optional.of(user));
 
         assertThrows(UnauthorizedException.class,
                 () -> userAccountService.changePassword(
                         "John.Smith", "wrongPassword", "newPassword"));
 
-        assertEquals("actualPassword", user.getPassword());
+        assertTrue(passwordEncoder.matches("actualPassword", user.getPassword()));
     }
 
     @Test
@@ -94,11 +100,13 @@ class UserAccountServiceTest {
         when(userRepository.existsByUsername("John.Smith1")).thenReturn(false);
         when(passwordGenerator.generate()).thenReturn("Pass123456");
 
-        userAccountService.generateCredentials(user);
+        RegistrationCredentials credentials = userAccountService.generateCredentials(user);
 
         assertAll(
                 () -> assertEquals("John.Smith1", user.getUsername()),
-                () -> assertEquals("Pass123456", user.getPassword()),
+                () -> assertEquals("Pass123456", credentials.rawPassword()),
+                () -> assertTrue(passwordEncoder.matches("Pass123456", user.getPassword())),
+                () -> assertNotEquals("Pass123456", user.getPassword()),
                 () -> verify(passwordGenerator).generate()
         );
     }

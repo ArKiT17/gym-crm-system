@@ -15,6 +15,7 @@ import com.maxlikarenko.gymcrmsystem.model.Trainee;
 import com.maxlikarenko.gymcrmsystem.service.TraineeService;
 import com.maxlikarenko.gymcrmsystem.service.TrainerService;
 import com.maxlikarenko.gymcrmsystem.service.TrainingService;
+import com.maxlikarenko.gymcrmsystem.account.RegistrationCredentials;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -47,8 +48,8 @@ public class TraineeFacade {
 
     public CredentialsResponse create(TraineeRegistrationRequest request) {
         log.info("Facade request to create trainee");
-        Trainee created = traineeService.create(traineeMapper.toEntity(request));
-        return new CredentialsResponse(created.getUser().getUsername(), created.getUser().getPassword());
+        RegistrationCredentials credentials = traineeService.create(traineeMapper.toEntity(request));
+        return new CredentialsResponse(credentials.username(), credentials.rawPassword());
     }
 
     public TraineeProfileResponse update(String username, TraineeProfileUpdateRequest request) {
