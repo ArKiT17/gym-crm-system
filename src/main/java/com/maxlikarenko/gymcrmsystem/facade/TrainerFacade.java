@@ -14,7 +14,6 @@ import com.maxlikarenko.gymcrmsystem.service.TrainerService;
 import com.maxlikarenko.gymcrmsystem.service.TrainingService;
 import com.maxlikarenko.gymcrmsystem.service.TrainingTypeService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -29,7 +28,6 @@ public class TrainerFacade {
     private final TrainerMapper trainerMapper;
     private final TrainingMapper trainingMapper;
 
-    @Autowired
     public TrainerFacade(TrainerService trainerService,
                          TrainingService trainingService,
                          TrainingTypeService trainingTypeService,

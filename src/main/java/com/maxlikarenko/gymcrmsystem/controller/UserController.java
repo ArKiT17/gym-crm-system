@@ -3,10 +3,9 @@ package com.maxlikarenko.gymcrmsystem.controller;
 import com.maxlikarenko.gymcrmsystem.dto.request.ChangeLoginRequest;
 import com.maxlikarenko.gymcrmsystem.dto.request.UserActivationRequest;
 import com.maxlikarenko.gymcrmsystem.facade.AccountFacade;
-import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final AccountFacade accountFacade;
 
-    @Autowired
     public UserController(AccountFacade accountFacade) {
         this.accountFacade = accountFacade;
     }

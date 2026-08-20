@@ -22,9 +22,7 @@ class TrainerServiceTest {
     void setUp() {
         userAccountService = mock(UserAccountService.class);
         trainerRepository = mock(TrainerRepository.class);
-        trainerService = new TrainerService();
-        trainerService.setUserAccountService(userAccountService);
-        trainerService.setTrainerRepository(trainerRepository);
+        trainerService = new TrainerService(userAccountService, trainerRepository);
     }
 
     @Test

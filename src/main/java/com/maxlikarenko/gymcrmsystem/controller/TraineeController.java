@@ -9,10 +9,9 @@ import com.maxlikarenko.gymcrmsystem.dto.response.trainee.TraineeProfileResponse
 import com.maxlikarenko.gymcrmsystem.dto.response.trainee.TraineeTrainingResponse;
 import com.maxlikarenko.gymcrmsystem.dto.response.trainer.TrainerSummaryResponse;
 import com.maxlikarenko.gymcrmsystem.facade.TraineeFacade;
-import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +24,6 @@ import java.util.Set;
 public class TraineeController {
     private final TraineeFacade traineeFacade;
 
-    @Autowired
     public TraineeController(TraineeFacade traineeFacade) {
         this.traineeFacade = traineeFacade;
     }

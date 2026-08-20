@@ -1,6 +1,5 @@
 package com.maxlikarenko.gymcrmsystem.config;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -9,7 +8,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebMvcConfig implements WebMvcConfigurer {
     private final AuthenticationInterceptor authenticationInterceptor;
 
-    @Autowired
     public WebMvcConfig(AuthenticationInterceptor authenticationInterceptor) {
         this.authenticationInterceptor = authenticationInterceptor;
     }

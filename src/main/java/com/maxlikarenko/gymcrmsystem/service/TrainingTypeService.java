@@ -1,10 +1,9 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import com.maxlikarenko.gymcrmsystem.model.TrainingType;
 import com.maxlikarenko.gymcrmsystem.repository.TrainingTypeRepository;
-import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,10 +11,9 @@ import java.util.List;
 @Slf4j
 @Service
 public class TrainingTypeService {
-    private TrainingTypeRepository trainingTypeRepository;
+    private final TrainingTypeRepository trainingTypeRepository;
 
-    @Autowired
-    public void setTrainingTypeRepository(TrainingTypeRepository trainingTypeRepository) {
+    public TrainingTypeService(TrainingTypeRepository trainingTypeRepository) {
         this.trainingTypeRepository = trainingTypeRepository;
     }
 
