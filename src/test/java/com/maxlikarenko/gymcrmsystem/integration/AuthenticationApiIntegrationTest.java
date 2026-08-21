@@ -1,9 +1,18 @@
 package com.maxlikarenko.gymcrmsystem.integration;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.jwt.JwsHeader;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.is;
@@ -14,6 +23,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
+    @Autowired
+    private JwtDecoder jwtDecoder;
+
+    @Autowired
+    private JwtEncoder jwtEncoder;
+
     @Test
     void registersAndAuthenticatesTrainee() throws Exception {
         Credentials trainee = registerTrainee("Rest", "Trainee");
@@ -33,6 +48,16 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
                 .getContentAsString();
 
         String accessToken = objectMapper.readTree(loginResponse).get("accessToken").asText();
+        Jwt jwt = jwtDecoder.decode(accessToken);
+
+        assertAll(
+                () -> assertEquals(trainee.username(), jwt.getSubject()),
+                () -> assertNotNull(jwt.getIssuedAt()),
+                () -> assertNotNull(jwt.getExpiresAt()),
+                () -> assertTrue(jwt.getExpiresAt() != null && jwt.getExpiresAt().isAfter(Instant.now())),
+                () -> assertNotNull(jwt.getId()),
+                () -> assertTrue(jwt.getId() != null && !jwt.getId().isBlank())
+        );
 
         mockMvc.perform(get("/api/trainees/{username}", trainee.username())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
@@ -90,6 +115,73 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
     }
 
     @Test
+    void rejectsMalformedBearerToken() throws Exception {
+        mockMvc.perform(get("/api/training-types")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer malformed-token"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/training-types")
+                        .header(HttpHeaders.AUTHORIZATION, "Basic malformed-token"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void rejectsTamperedJwt() throws Exception {
+        Credentials trainee = registerTrainee("Tampered", "Token");
+        String tamperedToken = trainee.accessToken().substring(0, trainee.accessToken().lastIndexOf('.') + 1)
+                + "invalid-signature";
+
+        mockMvc.perform(get("/api/training-types")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tamperedToken))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void rejectsExpiredJwt() throws Exception {
+        String expiredToken = jwtEncoder.encode(
+                JwtEncoderParameters.from(
+                        JwsHeader.with(MacAlgorithm.HS256).build(),
+                        JwtClaimsSet.builder()
+                                .id(UUID.randomUUID().toString())
+                                .subject("Expired.User")
+                                .issuedAt(Instant.now().minusSeconds(120))
+                                .expiresAt(Instant.now().minusSeconds(60))
+                                .build()
+                )
+        ).getTokenValue();
+
+        mockMvc.perform(get("/api/training-types")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + expiredToken))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void revokingOneTokenDoesNotRevokeAnotherTokenForTheSameUser() throws Exception {
+        Credentials trainee = registerTrainee("Token", "Isolation");
+
+        String secondLoginResponse = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new LoginPayload(trainee.username(), trainee.password())
+                        )))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String secondToken = objectMapper.readTree(secondLoginResponse).get("accessToken").asText();
+
+        assertNotEquals(trainee.accessToken(), secondToken);
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .headers(trainee.headers()))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/training-types")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + secondToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void allowsCorsPreflightFromConfiguredOrigin() throws Exception {
         mockMvc.perform(options("/api/training-types")
                         .header("Origin", "http://localhost:3000")
@@ -98,7 +190,20 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"))
                 .andExpect(header().string("Access-Control-Allow-Methods", org.hamcrest.Matchers.containsString("GET")))
-                .andExpect(header().string("Access-Control-Allow-Headers", org.hamcrest.Matchers.containsString("Authorization")));
+                .andExpect(header().string("Access-Control-Allow-Headers", org.hamcrest.Matchers.containsString("Authorization")))
+                .andExpect(header().string("Access-Control-Max-Age", "3600"));
+    }
+
+    @Test
+    void exposesTransactionHeaderForConfiguredCorsOrigin() throws Exception {
+        Credentials trainee = registerTrainee("Cors", "Response");
+
+        mockMvc.perform(get("/api/training-types")
+                        .headers(trainee.headers())
+                        .header("Origin", "http://localhost:3000"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"))
+                .andExpect(header().string("Access-Control-Expose-Headers", org.hamcrest.Matchers.containsString("X-Transaction-Id")));
     }
 
     @Test
@@ -160,5 +265,8 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
                                 {"firstName":"Rest", "lastName":"Trainee", "dateOfBirth":"not-a-date"}
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    private record LoginPayload(String username, String password) {
     }
 }
