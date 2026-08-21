@@ -49,6 +49,16 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
     }
 
     @Test
+    void rejectsAccessToAnotherUsersProfile() throws Exception {
+        Credentials trainee = registerTrainee("Owner", "Trainee");
+        Credentials trainer = registerTrainer("Other", "Trainer");
+
+        mockMvc.perform(get("/api/trainers/{username}", trainer.username())
+                        .headers(trainee.headers()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void generatesAndPropagatesTransactionId() throws Exception {
         Credentials trainee = registerTrainee("Transaction", "Trainee");
 

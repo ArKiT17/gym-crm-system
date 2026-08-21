@@ -17,6 +17,7 @@ import com.maxlikarenko.gymcrmsystem.service.TrainerService;
 import com.maxlikarenko.gymcrmsystem.service.TrainingService;
 import com.maxlikarenko.gymcrmsystem.account.RegistrationCredentials;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -52,6 +53,7 @@ public class TraineeFacade {
         return new CredentialsResponse(credentials.username(), credentials.rawPassword());
     }
 
+    @PreAuthorize("#username == authentication.name")
     public TraineeProfileResponse update(String username, TraineeProfileUpdateRequest request) {
         log.info("Facade request to update trainee with username {}", username);
         Trainee updated = traineeService.update(username, request.firstName(), request.lastName(),
@@ -64,6 +66,7 @@ public class TraineeFacade {
         traineeService.delete(id);
     }
 
+    @PreAuthorize("#username == authentication.name")
     public void delete(String username) {
         log.info("Facade request to delete trainee with username {}", username);
         traineeService.delete(username);
@@ -75,12 +78,14 @@ public class TraineeFacade {
         return traineeMapper.toProfile(trainee);
     }
 
+    @PreAuthorize("#username == authentication.name")
     public TraineeProfileResponse getByUsername(String username) {
         log.debug("Facade request to get trainee with username {}", username);
         Trainee trainee = traineeService.get(username);
         return traineeMapper.toProfile(trainee);
     }
 
+    @PreAuthorize("#traineeUsername == authentication.name")
     public Set<TraineeTrainingResponse> getTrainings(String traineeUsername, TraineeTrainingsQuery query) {
         return trainingService.getTraineeTrainings(
                         traineeUsername, query.periodFrom(), query.periodTo(), query.trainerName(), query.trainingType()
@@ -89,12 +94,14 @@ public class TraineeFacade {
                 .collect(Collectors.toSet());
     }
 
+    @PreAuthorize("#traineeUsername == authentication.name")
     public Set<TrainerSummaryResponse> getNotAssignedTrainers(String traineeUsername) {
         return trainerService.getNotAssignedTrainers(traineeUsername).stream()
                 .map(trainerMapper::toSummary)
                 .collect(Collectors.toSet());
     }
 
+    @PreAuthorize("#traineeUsername == authentication.name")
     public Set<TrainerSummaryResponse> updateTrainers(String traineeUsername, TraineeTrainersUpdateRequest request) {
         return traineeService.updateTrainers(traineeUsername, request.trainerUsernames()).stream()
                 .map(trainerMapper::toSummary)

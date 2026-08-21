@@ -8,6 +8,7 @@ import com.maxlikarenko.gymcrmsystem.service.AuthenticationService;
 import com.maxlikarenko.gymcrmsystem.service.UserAccountService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -36,11 +37,13 @@ public class AccountFacade {
         );
     }
 
+    @PreAuthorize("#username == authentication.name")
     public void changePassword(String username, ChangeLoginRequest request) {
         log.info("Facade request to change password for user {}", username);
         userAccountService.changePassword(username, request.oldPassword(), request.newPassword());
     }
 
+    @PreAuthorize("#username == authentication.name")
     public void activateUser(String username, boolean activated) {
         log.info("Facade request to {} user {}", activated ? "activate" : "deactivate", username);
         userAccountService.activate(username, activated);

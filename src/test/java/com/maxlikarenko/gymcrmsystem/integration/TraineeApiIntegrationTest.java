@@ -88,8 +88,8 @@ class TraineeApiIntegrationTest extends RestApiIntegrationTestSupport {
 
         mockMvc.perform(get("/api/trainees/does.not.exist")
                         .headers(trainee.headers()))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.detail", is("Trainee with username does.not.exist not found")));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.detail", is("Access denied")));
 
         mockMvc.perform(post("/api/trainees/" + trainee.username())
                         .headers(trainee.headers()))

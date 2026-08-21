@@ -6,6 +6,7 @@ import com.maxlikarenko.gymcrmsystem.mapper.TrainingTypeMapper;
 import com.maxlikarenko.gymcrmsystem.service.TrainingService;
 import com.maxlikarenko.gymcrmsystem.service.TrainingTypeService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -26,6 +27,7 @@ public class TrainingFacade {
         this.trainingTypeMapper = trainingTypeMapper;
     }
 
+    @PreAuthorize("#request.traineeUsername == authentication.name or #request.trainerUsername == authentication.name")
     public void add(AddTrainingRequest request) {
         log.info("Facade request to add training for trainee {} and trainer {}", request.traineeUsername(), request.trainerUsername());
         trainingService.addTraining(

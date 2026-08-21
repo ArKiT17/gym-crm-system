@@ -10,6 +10,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -94,6 +95,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     public ProblemDetail handleUnauthorized(UnauthorizedException exception) {
         return problem(HttpStatus.UNAUTHORIZED, messageOrDefault(exception, "Authentication required"));
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ProblemDetail handleAuthorizationDenied(AuthorizationDeniedException exception) {
+        return problem(HttpStatus.FORBIDDEN, "Access denied");
     }
 
     @ExceptionHandler(ConflictException.class)
