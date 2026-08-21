@@ -70,6 +70,25 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
     }
 
     @Test
+    void logoutRevokesAccessToken() throws Exception {
+        Credentials trainee = registerTrainee("Logout", "Trainee");
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .headers(trainee.headers()))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/trainees/{username}", trainee.username())
+                        .headers(trainee.headers()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void logoutRequiresAuthentication() throws Exception {
+        mockMvc.perform(post("/api/auth/logout"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void rejectsAccessToAnotherUsersProfile() throws Exception {
         Credentials trainee = registerTrainee("Owner", "Trainee");
         Credentials trainer = registerTrainer("Other", "Trainer");

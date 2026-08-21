@@ -1,8 +1,12 @@
 package com.maxlikarenko.gymcrmsystem.config;
 
+import com.maxlikarenko.gymcrmsystem.security.JwtLogoutHandler;
+import com.maxlikarenko.gymcrmsystem.security.RevokedTokenJwtDecoder;
+import com.maxlikarenko.gymcrmsystem.security.RevokedTokenService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -17,6 +21,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -29,15 +34,31 @@ import static org.springframework.http.HttpMethod.POST;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain configure(HttpSecurity http) {
+    public SecurityFilterChain configure(HttpSecurity http, JwtLogoutHandler jwtLogoutHandler) {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(POST, "/api/auth/login", "/api/trainees", "/api/trainers").permitAll()
+                        .requestMatchers(POST, "/api/auth/logout").authenticated()
                         .anyRequest().authenticated()
+                )
+                .logout(logout -> logout
+                        .logoutRequestMatcher(request ->
+                                POST.matches(request.getMethod())
+                                        && (request.getContextPath() + "/api/auth/logout").equals(request.getRequestURI())
+                                        && request.getHeader("Authorization") != null
+                                        && request.getHeader("Authorization").startsWith("Bearer ")
+                        )
+                        .addLogoutHandler(jwtLogoutHandler)
+                        .logoutSuccessHandler(logoutSuccessHandler())
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
         return http.build();
+    }
+
+    @Bean
+    public LogoutSuccessHandler logoutSuccessHandler() {
+        return (request, response, authentication) -> response.setStatus(HttpStatus.NO_CONTENT.value());
     }
 
     @Bean
@@ -62,10 +83,11 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtDecoder jwtDecoder(SecretKey jwtSecretKey) {
-        return NimbusJwtDecoder.withSecretKey(jwtSecretKey)
+    public JwtDecoder jwtDecoder(SecretKey jwtSecretKey, RevokedTokenService revokedTokenService) {
+        JwtDecoder decoder = NimbusJwtDecoder.withSecretKey(jwtSecretKey)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
+        return new RevokedTokenJwtDecoder(decoder, revokedTokenService);
     }
 
     @Bean
