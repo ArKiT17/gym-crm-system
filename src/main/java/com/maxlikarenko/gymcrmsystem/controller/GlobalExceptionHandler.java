@@ -2,6 +2,7 @@ package com.maxlikarenko.gymcrmsystem.controller;
 
 import com.maxlikarenko.gymcrmsystem.exception.ConflictException;
 import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.TooManyLoginAttemptsException;
 import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -95,6 +96,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     public ProblemDetail handleUnauthorized(UnauthorizedException exception) {
         return problem(HttpStatus.UNAUTHORIZED, messageOrDefault(exception, "Authentication required"));
+    }
+
+    @ExceptionHandler(TooManyLoginAttemptsException.class)
+    public ProblemDetail handleTooManyLoginAttempts(TooManyLoginAttemptsException exception) {
+        return problem(HttpStatus.TOO_MANY_REQUESTS, messageOrDefault(exception, "Too many login attempts"));
     }
 
     @ExceptionHandler(AuthorizationDeniedException.class)

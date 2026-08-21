@@ -49,6 +49,27 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
     }
 
     @Test
+    void locksLoginAfterThreeFailedAttempts() throws Exception {
+        Credentials trainee = registerTrainee("Brute", "Force");
+        String invalidLogin = """
+                {"username":"%s","password":"wrong-password"}
+                """.formatted(trainee.username());
+
+        for (int attempt = 0; attempt < 3; attempt++) {
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(invalidLogin))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidLogin))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.detail", is("Too many login attempts. Try again later.")));
+    }
+
+    @Test
     void rejectsAccessToAnotherUsersProfile() throws Exception {
         Credentials trainee = registerTrainee("Owner", "Trainee");
         Credentials trainer = registerTrainer("Other", "Trainer");

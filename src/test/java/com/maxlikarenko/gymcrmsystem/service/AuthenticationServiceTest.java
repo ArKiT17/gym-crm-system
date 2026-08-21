@@ -14,12 +14,14 @@ import static org.mockito.Mockito.*;
 class AuthenticationServiceTest {
 
     private AuthenticationManager authenticationManager;
+    private BruteForceProtectionService bruteForceProtectionService;
     private AuthenticationService authenticationService;
 
     @BeforeEach
     void setUp() {
         authenticationManager = mock(AuthenticationManager.class);
-        authenticationService = new AuthenticationService(authenticationManager);
+        bruteForceProtectionService = mock(BruteForceProtectionService.class);
+        authenticationService = new AuthenticationService(authenticationManager, bruteForceProtectionService);
     }
 
     @Test
@@ -29,6 +31,7 @@ class AuthenticationServiceTest {
 
         assertThrows(UnauthorizedException.class,
                 () -> authenticationService.authenticate("missing", "anyPass"));
+        verify(bruteForceProtectionService).recordFailedAttempt("missing");
     }
 
     @Test
@@ -39,6 +42,7 @@ class AuthenticationServiceTest {
         UnauthorizedException exception = assertThrows(UnauthorizedException.class,
                 () -> authenticationService.authenticate("John.Smith", "wrongPass"));
         assertEquals("Invalid username or password", exception.getMessage());
+        verify(bruteForceProtectionService).recordFailedAttempt("John.Smith");
     }
 
     @Test
@@ -47,6 +51,7 @@ class AuthenticationServiceTest {
         when(authenticationManager.authenticate(any(Authentication.class))).thenReturn(authentication);
 
         assertSame(authentication, authenticationService.authenticate("John.Smith", "correctPass"));
+        verify(bruteForceProtectionService).recordSuccessfulAttempt("John.Smith");
     }
 
     @Test
