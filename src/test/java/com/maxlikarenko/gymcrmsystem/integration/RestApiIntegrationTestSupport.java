@@ -6,16 +6,17 @@ import com.maxlikarenko.gymcrmsystem.config.TransactionLoggingFilter;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.WebApplicationContext;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -42,6 +43,7 @@ abstract class RestApiIntegrationTestSupport {
     void setUpMockMvc() {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
                 .addFilters(transactionLoggingFilter)
+                .apply(SecurityMockMvcConfigurers.springSecurity())
                 .build();
     }
 
@@ -65,7 +67,7 @@ abstract class RestApiIntegrationTestSupport {
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        return credentials(response);
+        return authenticate(credentials(response));
     }
 
     protected Credentials registerTrainer(String firstName, String lastName) throws Exception {
@@ -82,17 +84,39 @@ abstract class RestApiIntegrationTestSupport {
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        return credentials(response);
+        return authenticate(credentials(response));
     }
 
     private Credentials credentials(String response) throws Exception {
         JsonNode json = objectMapper.readTree(response);
-        return new Credentials(json.get("username").asText(), json.get("password").asText());
+        return new Credentials(json.get("username").asText(), json.get("password").asText(), null);
     }
 
-    protected record Credentials(String username, String password) {
+    private Credentials authenticate(Credentials credentials) throws Exception {
+        String response = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginPayload(
+                                credentials.username(), credentials.password()
+                        ))))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return new Credentials(
+                credentials.username(),
+                credentials.password(),
+                objectMapper.readTree(response).get("accessToken").asText()
+        );
+    }
+
+    private record LoginPayload(String username, String password) {
+    }
+
+    protected record Credentials(String username, String password, String accessToken) {
         protected HttpHeaders headers() {
-            return new HttpHeaders();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            return headers;
         }
     }
 }
