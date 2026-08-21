@@ -3,9 +3,10 @@ package com.maxlikarenko.gymcrmsystem.config;
 import com.maxlikarenko.gymcrmsystem.security.JwtLogoutHandler;
 import com.maxlikarenko.gymcrmsystem.security.RevokedTokenJwtDecoder;
 import com.maxlikarenko.gymcrmsystem.security.RevokedTokenService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
@@ -22,10 +23,15 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 
 import static org.springframework.http.HttpMethod.POST;
 
@@ -34,11 +40,17 @@ import static org.springframework.http.HttpMethod.POST;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain configure(HttpSecurity http, JwtLogoutHandler jwtLogoutHandler) {
+    public SecurityFilterChain configure(
+            HttpSecurity http,
+            JwtLogoutHandler jwtLogoutHandler,
+            CorsConfigurationSource corsConfigurationSource
+    ) {
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(POST, "/api/auth/login", "/api/trainees", "/api/trainers").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(POST, "/api/auth/logout").authenticated()
                         .anyRequest().authenticated()
                 )
@@ -54,6 +66,28 @@ public class SecurityConfig {
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${security.cors.allowed-origins}") String allowedOrigins
+    ) {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .toList());
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of(
+                "Authorization", "Content-Type", "Accept", "X-Transaction-Id"
+        ));
+        configuration.setExposedHeaders(List.of("X-Transaction-Id"));
+        configuration.setAllowCredentials(false);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     @Bean
