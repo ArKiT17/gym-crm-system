@@ -2,46 +2,46 @@ package com.maxlikarenko.gymcrmsystem.facade;
 
 import com.maxlikarenko.gymcrmsystem.dto.request.ChangeLoginRequest;
 import com.maxlikarenko.gymcrmsystem.dto.request.LoginRequest;
+import com.maxlikarenko.gymcrmsystem.dto.response.LoginResponse;
+import com.maxlikarenko.gymcrmsystem.security.JwtService;
 import com.maxlikarenko.gymcrmsystem.service.AuthenticationService;
 import com.maxlikarenko.gymcrmsystem.service.UserAccountService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.core.Authentication;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 class AccountFacadeTest {
     private AuthenticationService authenticationService;
     private UserAccountService userAccountService;
+    private JwtService jwtService;
     private AccountFacade accountFacade;
 
     @BeforeEach
     void setUp() {
         authenticationService = mock(AuthenticationService.class);
         userAccountService = mock(UserAccountService.class);
-        accountFacade = new AccountFacade(authenticationService, userAccountService);
+        jwtService = mock(JwtService.class);
+        accountFacade = new AccountFacade(authenticationService, userAccountService, jwtService);
     }
 
     @Test
-    void loginReturnsAuthenticationResult() {
+    void loginReturnsJwtResponse() {
         LoginRequest request = new LoginRequest("John.Smith", "password");
-        when(authenticationService.authenticate("John.Smith", "password")).thenReturn(true);
+        Authentication authentication = mock(Authentication.class);
+        when(authenticationService.authenticate("John.Smith", "password")).thenReturn(authentication);
+        when(jwtService.generateToken(authentication)).thenReturn("access-token");
+        when(jwtService.expirationSeconds()).thenReturn(900L);
 
-        assertTrue(accountFacade.login(request));
+        assertEquals(
+                new LoginResponse("access-token", "Bearer", 900L),
+                accountFacade.login(request)
+        );
 
         verify(authenticationService).authenticate("John.Smith", "password");
-        verifyNoInteractions(userAccountService);
-    }
-
-    @Test
-    void loginReturnsFalseWhenAuthenticationFails() {
-        LoginRequest request = new LoginRequest("John.Smith", "wrong");
-        when(authenticationService.authenticate("John.Smith", "wrong")).thenReturn(false);
-
-        assertFalse(accountFacade.login(request));
-
-        verify(authenticationService).authenticate("John.Smith", "wrong");
+        verify(jwtService).generateToken(authentication);
         verifyNoInteractions(userAccountService);
     }
 

@@ -6,6 +6,7 @@ import com.maxlikarenko.gymcrmsystem.config.TransactionLoggingFilter;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
@@ -33,6 +34,9 @@ abstract class RestApiIntegrationTestSupport {
 
     protected final ObjectMapper objectMapper = new ObjectMapper();
     protected MockMvc mockMvc;
+
+    @Value("${security.jwt.expiration-seconds}")
+    protected int jwtExpirationSeconds;
 
     @BeforeEach
     void setUpMockMvc() {

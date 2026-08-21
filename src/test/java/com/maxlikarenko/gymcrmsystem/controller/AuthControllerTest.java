@@ -1,14 +1,17 @@
 package com.maxlikarenko.gymcrmsystem.controller;
 
 import com.maxlikarenko.gymcrmsystem.dto.request.LoginRequest;
+import com.maxlikarenko.gymcrmsystem.dto.response.LoginResponse;
 import com.maxlikarenko.gymcrmsystem.facade.AccountFacade;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class AuthControllerTest {
@@ -25,21 +28,30 @@ class AuthControllerTest {
     }
 
     @Test
-    void loginAcceptsValidQueryParameters() throws Exception {
-        when(accountFacade.login(any(LoginRequest.class))).thenReturn(true);
+    void loginAcceptsValidJsonCredentials() throws Exception {
+        when(accountFacade.login(any(LoginRequest.class)))
+                .thenReturn(new LoginResponse("access-token", "Bearer", 900L));
 
-        mockMvc.perform(get("/api/auth/login")
-                        .param("username", "John.Smith")
-                        .param("password", "password"))
-                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"John.Smith","password":"password"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.expiresIn").value(900));
 
         verify(accountFacade).login(any(LoginRequest.class));
     }
 
     @Test
     void loginRejectsMissingRequiredParameter() throws Exception {
-        mockMvc.perform(get("/api/auth/login")
-                        .param("username", "John.Smith"))
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"John.Smith"}
+                                """))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(accountFacade);
@@ -47,9 +59,11 @@ class AuthControllerTest {
 
     @Test
     void loginRejectsBlankCredentials() throws Exception {
-        mockMvc.perform(get("/api/auth/login")
-                        .param("username", " ")
-                        .param("password", " "))
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":" ","password":" "}
+                                """))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(accountFacade);

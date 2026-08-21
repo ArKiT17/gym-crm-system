@@ -8,10 +8,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 class AuthenticationServiceTest {
 
@@ -44,10 +42,11 @@ class AuthenticationServiceTest {
     }
 
     @Test
-    void authenticateReturnsTrueOnSuccess() {
-        when(authenticationManager.authenticate(any(Authentication.class))).thenReturn(null);
+    void authenticateReturnsAuthenticationOnSuccess() {
+        Authentication authentication = mock(Authentication.class);
+        when(authenticationManager.authenticate(any(Authentication.class))).thenReturn(authentication);
 
-        assertTrue(authenticationService.authenticate("John.Smith", "correctPass"));
+        assertSame(authentication, authenticationService.authenticate("John.Smith", "correctPass"));
     }
 
     @Test

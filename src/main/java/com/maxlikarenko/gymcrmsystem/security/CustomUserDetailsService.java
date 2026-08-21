@@ -1,11 +1,11 @@
 package com.maxlikarenko.gymcrmsystem.security;
 
-import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
 import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
 import org.jspecify.annotations.NonNull;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -17,9 +17,9 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
-    public @NonNull UserDetails loadUserByUsername(@NonNull String username) throws UnauthorizedException {
+    public @NonNull UserDetails loadUserByUsername(@NonNull String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UnauthorizedException("Invalid username or password"));
+                .orElseThrow(() -> new UsernameNotFoundException("Invalid username or password"));
 
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getUsername())

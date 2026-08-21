@@ -6,25 +6,26 @@ import org.springframework.http.MediaType;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
     @Test
     void registersAndAuthenticatesTrainee() throws Exception {
         Credentials trainee = registerTrainee("Rest", "Trainee");
 
-        mockMvc.perform(get("/api/auth/login")
-                        .param("username", trainee.username())
-                        .param("password", trainee.password()))
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"%s","password":"%s"}
+                                """.formatted(trainee.username(), trainee.password())))
                 .andExpect(status().isOk())
-                .andExpect(header().exists("X-Transaction-Id"));
+                .andExpect(header().exists("X-Transaction-Id"))
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.tokenType", is("Bearer")))
+                .andExpect(jsonPath("$.expiresIn", is(jwtExpirationSeconds)));
 
         mockMvc.perform(get("/api/trainees/{username}", trainee.username()))
                 .andExpect(status().isOk())
