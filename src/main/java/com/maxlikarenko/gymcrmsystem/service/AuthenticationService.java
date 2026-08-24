@@ -1,42 +1,38 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
 import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
-import com.maxlikarenko.gymcrmsystem.model.User;
-import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 public class AuthenticationService {
-    private final UserRepository userRepository;
+    private final AuthenticationManager authenticationManager;
+    private final BruteForceProtectionService bruteForceProtectionService;
 
-    public AuthenticationService(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public AuthenticationService(AuthenticationManager authenticationManager,
+                                 BruteForceProtectionService bruteForceProtectionService) {
+        this.authenticationManager = authenticationManager;
+        this.bruteForceProtectionService = bruteForceProtectionService;
     }
 
-    public boolean authenticate(String username, String password) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UnauthorizedException("Invalid username or password"));
-
-        checkPassword(user, password);
-        checkStatus(user);
-
-        log.debug("User authentication successful for username {}", username);
-        return true;
-    }
-
-    private void checkPassword(User user, String password) {
-        if (!user.getPassword().equals(password)) {
-            log.warn("Authentication failed for user {}", user.getUsername());
+    public Authentication authenticate(String username, String password) {
+        bruteForceProtectionService.check(username);
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    UsernamePasswordAuthenticationToken.unauthenticated(username, password)
+            );
+            bruteForceProtectionService.recordSuccessfulAttempt(username);
+            log.debug("User authentication successful for username {}", username);
+            return authentication;
+        } catch (AuthenticationException exception) {
+            bruteForceProtectionService.recordFailedAttempt(username);
+            log.warn("Authentication failed for username {}", username);
             throw new UnauthorizedException("Invalid username or password");
-        }
-    }
-
-    private void checkStatus(User user) {
-        if (!user.isActive()) {
-            log.warn("Authentication failed. User {} is inactive", user.getUsername());
-            throw new UnauthorizedException("Account is inactive");
         }
     }
 }

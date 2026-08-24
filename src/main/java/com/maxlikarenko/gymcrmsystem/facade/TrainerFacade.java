@@ -1,5 +1,6 @@
 package com.maxlikarenko.gymcrmsystem.facade;
 
+import com.maxlikarenko.gymcrmsystem.account.RegistrationCredentials;
 import com.maxlikarenko.gymcrmsystem.dto.request.trainer.TrainerProfileUpdateRequest;
 import com.maxlikarenko.gymcrmsystem.dto.request.trainer.TrainerRegistrationRequest;
 import com.maxlikarenko.gymcrmsystem.dto.request.trainer.TrainerTrainingsQuery;
@@ -14,6 +15,7 @@ import com.maxlikarenko.gymcrmsystem.service.TrainerService;
 import com.maxlikarenko.gymcrmsystem.service.TrainingService;
 import com.maxlikarenko.gymcrmsystem.service.TrainingTypeService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -43,10 +45,11 @@ public class TrainerFacade {
     public CredentialsResponse create(TrainerRegistrationRequest request) {
         log.info("Facade request to create trainer");
         TrainingType specialization = trainingTypeService.get(request.specializationId());
-        Trainer created = trainerService.create(trainerMapper.toEntity(request, specialization));
-        return new CredentialsResponse(created.getUser().getUsername(), created.getUser().getPassword());
+        RegistrationCredentials credentials = trainerService.create(trainerMapper.toEntity(request, specialization));
+        return new CredentialsResponse(credentials.username(), credentials.rawPassword());
     }
 
+    @PreAuthorize("#username == authentication.name")
     public TrainerProfileResponse update(String username, TrainerProfileUpdateRequest request) {
         log.info("Facade request to update trainer with username {}", username);
         Trainer updated = trainerService.update(username, request.firstName(), request.lastName(), request.isActive());
@@ -59,12 +62,14 @@ public class TrainerFacade {
         return trainerMapper.toProfile(trainer);
     }
 
+    @PreAuthorize("#username == authentication.name")
     public TrainerProfileResponse getByUsername(String username) {
         log.debug("Facade request to find trainer with username {}", username);
         Trainer trainer = trainerService.get(username);
         return trainerMapper.toProfile(trainer);
     }
 
+    @PreAuthorize("#trainerUsername == authentication.name")
     public Set<TrainerTrainingResponse> getTrainings(String trainerUsername, TrainerTrainingsQuery query) {
         return trainingService.getTrainerTrainings(
                         trainerUsername, query.periodFrom(), query.periodTo(), query.traineeName()

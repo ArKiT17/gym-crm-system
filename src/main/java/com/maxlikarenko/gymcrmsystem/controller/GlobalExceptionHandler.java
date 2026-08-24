@@ -2,6 +2,7 @@ package com.maxlikarenko.gymcrmsystem.controller;
 
 import com.maxlikarenko.gymcrmsystem.exception.ConflictException;
 import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
+import com.maxlikarenko.gymcrmsystem.exception.TooManyLoginAttemptsException;
 import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -10,6 +11,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -94,6 +96,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     public ProblemDetail handleUnauthorized(UnauthorizedException exception) {
         return problem(HttpStatus.UNAUTHORIZED, messageOrDefault(exception, "Authentication required"));
+    }
+
+    @ExceptionHandler(TooManyLoginAttemptsException.class)
+    public ProblemDetail handleTooManyLoginAttempts(TooManyLoginAttemptsException exception) {
+        return problem(HttpStatus.TOO_MANY_REQUESTS, messageOrDefault(exception, "Too many login attempts"));
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ProblemDetail handleAuthorizationDenied(AuthorizationDeniedException exception) {
+        return problem(HttpStatus.FORBIDDEN, "Access denied");
     }
 
     @ExceptionHandler(ConflictException.class)

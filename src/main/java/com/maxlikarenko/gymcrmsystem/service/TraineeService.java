@@ -1,6 +1,7 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
 import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
+import com.maxlikarenko.gymcrmsystem.account.RegistrationCredentials;
 import com.maxlikarenko.gymcrmsystem.model.Trainee;
 import com.maxlikarenko.gymcrmsystem.model.Trainer;
 import com.maxlikarenko.gymcrmsystem.repository.TraineeRepository;
@@ -27,15 +28,16 @@ public class TraineeService {
     }
 
     @Transactional
-    public Trainee create(Trainee trainee) {
+    public RegistrationCredentials create(Trainee trainee) {
         if (trainee == null) {
             throw new IllegalArgumentException("Trainee cannot be null");
         }
 
-        userAccountService.generateCredentials(trainee.getUser());
+        RegistrationCredentials credentials = userAccountService.generateCredentials(trainee.getUser());
 
-        log.info("Creating trainee with username {}", trainee.getUser().getUsername());
-        return traineeRepository.save(trainee);
+        traineeRepository.save(trainee);
+        log.info("Creating trainee with username {}", credentials.username());
+        return credentials;
     }
 
     @Transactional

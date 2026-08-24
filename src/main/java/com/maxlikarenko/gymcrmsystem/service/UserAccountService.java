@@ -1,5 +1,6 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
+import com.maxlikarenko.gymcrmsystem.account.RegistrationCredentials;
 import com.maxlikarenko.gymcrmsystem.exception.ConflictException;
 import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import com.maxlikarenko.gymcrmsystem.exception.UnauthorizedException;
@@ -7,6 +8,7 @@ import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.UserRepository;
 import com.maxlikarenko.gymcrmsystem.util.PasswordGenerator;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,10 +17,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserAccountService {
     private final UserRepository userRepository;
     private final PasswordGenerator passwordGenerator;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserAccountService(UserRepository userRepository, PasswordGenerator passwordGenerator) {
+    public UserAccountService(UserRepository userRepository,
+                              PasswordGenerator passwordGenerator,
+                              PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordGenerator = passwordGenerator;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
@@ -39,13 +45,18 @@ public class UserAccountService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
 
         checkPassword(oldPassword, user.getPassword());
-        user.setPassword(newPassword);
+        user.setPassword(passwordEncoder.encode(newPassword));
         log.info("Password changed for user {}", username);
     }
 
-    public void generateCredentials(User user) {
-        user.setUsername(generateUsername(user.getFirstName(), user.getLastName()));
-        user.setPassword(passwordGenerator.generate());
+    public RegistrationCredentials generateCredentials(User user) {
+        String username = generateUsername(user.getFirstName(), user.getLastName());
+        String rawPassword = passwordGenerator.generate();
+
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(rawPassword));
+
+        return new RegistrationCredentials(username, rawPassword);
     }
 
     private String generateUsername(String firstName, String lastName) {
@@ -62,7 +73,7 @@ public class UserAccountService {
     }
 
     private void checkPassword(String enteredPassword, String actualPassword) {
-        if (!enteredPassword.equals(actualPassword)) {
+        if (!passwordEncoder.matches(enteredPassword, actualPassword)) {
             log.warn("User entered a wrong password");
             throw new UnauthorizedException("Current password is invalid");
         }

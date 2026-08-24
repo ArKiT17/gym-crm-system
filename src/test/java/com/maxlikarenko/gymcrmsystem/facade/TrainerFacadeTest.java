@@ -1,5 +1,6 @@
 package com.maxlikarenko.gymcrmsystem.facade;
 
+import com.maxlikarenko.gymcrmsystem.account.RegistrationCredentials;
 import com.maxlikarenko.gymcrmsystem.dto.request.trainer.TrainerProfileUpdateRequest;
 import com.maxlikarenko.gymcrmsystem.dto.request.trainer.TrainerRegistrationRequest;
 import com.maxlikarenko.gymcrmsystem.dto.request.trainer.TrainerTrainingsQuery;
@@ -21,7 +22,8 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.*;
 
 class TrainerFacadeTest {
@@ -52,7 +54,7 @@ class TrainerFacadeTest {
         Trainer trainer = trainer("Jane.Doe", "generated");
         when(trainingTypeService.get(7L)).thenReturn(specialization);
         when(trainerMapper.toEntity(request, specialization)).thenReturn(trainer);
-        when(trainerService.create(trainer)).thenReturn(trainer);
+        when(trainerService.create(trainer)).thenReturn(new RegistrationCredentials("Jane.Doe", "generated"));
 
         CredentialsResponse result = trainerFacade.create(request);
 

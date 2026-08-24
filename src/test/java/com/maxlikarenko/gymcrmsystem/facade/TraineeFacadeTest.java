@@ -1,9 +1,10 @@
 package com.maxlikarenko.gymcrmsystem.facade;
 
+import com.maxlikarenko.gymcrmsystem.account.RegistrationCredentials;
 import com.maxlikarenko.gymcrmsystem.dto.request.trainee.TraineeProfileUpdateRequest;
 import com.maxlikarenko.gymcrmsystem.dto.request.trainee.TraineeRegistrationRequest;
-import com.maxlikarenko.gymcrmsystem.dto.request.trainee.TraineeTrainingsQuery;
 import com.maxlikarenko.gymcrmsystem.dto.request.trainee.TraineeTrainersUpdateRequest;
+import com.maxlikarenko.gymcrmsystem.dto.request.trainee.TraineeTrainingsQuery;
 import com.maxlikarenko.gymcrmsystem.dto.response.CredentialsResponse;
 import com.maxlikarenko.gymcrmsystem.dto.response.trainee.TraineeProfileResponse;
 import com.maxlikarenko.gymcrmsystem.dto.response.trainee.TraineeTrainingResponse;
@@ -24,7 +25,8 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.*;
 
 class TraineeFacadeTest {
@@ -56,7 +58,7 @@ class TraineeFacadeTest {
                 new TraineeRegistrationRequest("John", "Smith", null, "Kyiv");
         Trainee trainee = trainee("John.Smith", "generated");
         when(traineeMapper.toEntity(request)).thenReturn(trainee);
-        when(traineeService.create(trainee)).thenReturn(trainee);
+        when(traineeService.create(trainee)).thenReturn(new RegistrationCredentials("John.Smith", "generated"));
 
         CredentialsResponse result = traineeFacade.create(request);
 

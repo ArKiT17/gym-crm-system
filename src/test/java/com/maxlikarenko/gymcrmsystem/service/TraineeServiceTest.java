@@ -1,10 +1,11 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
+import com.maxlikarenko.gymcrmsystem.account.RegistrationCredentials;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import com.maxlikarenko.gymcrmsystem.model.Trainee;
 import com.maxlikarenko.gymcrmsystem.model.Trainer;
 import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.TraineeRepository;
-import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -33,9 +34,10 @@ class TraineeServiceTest {
     void createGeneratesCredentialsAndSavesTrainee() {
         User user = new User("John", "Smith");
         Trainee trainee = new Trainee(user, null, null);
-        when(traineeRepository.save(trainee)).thenReturn(trainee);
+        RegistrationCredentials credentials = new RegistrationCredentials("John.Smith", "generated");
+        when(userAccountService.generateCredentials(user)).thenReturn(credentials);
 
-        assertSame(trainee, traineeService.create(trainee));
+        assertSame(credentials, traineeService.create(trainee));
         verify(userAccountService).generateCredentials(user);
         verify(traineeRepository).save(trainee);
     }
@@ -43,7 +45,7 @@ class TraineeServiceTest {
     @Test
     void createRejectsNullTrainee() {
         assertThrows(IllegalArgumentException.class, () -> traineeService.create(null));
-        verifyNoInteractions(userAccountService, traineeRepository);
+        verifyNoInteractions(userAccountService, trainerService, traineeRepository);
     }
 
     @Test

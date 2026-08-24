@@ -1,9 +1,10 @@
 package com.maxlikarenko.gymcrmsystem.service;
 
+import com.maxlikarenko.gymcrmsystem.account.RegistrationCredentials;
+import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import com.maxlikarenko.gymcrmsystem.model.Trainer;
 import com.maxlikarenko.gymcrmsystem.model.User;
 import com.maxlikarenko.gymcrmsystem.repository.TrainerRepository;
-import com.maxlikarenko.gymcrmsystem.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -29,9 +30,10 @@ class TrainerServiceTest {
     void createGeneratesCredentialsAndSavesTrainer() {
         User user = new User("Jane", "Smith");
         Trainer trainer = new Trainer(user, null);
-        when(trainerRepository.save(trainer)).thenReturn(trainer);
+        RegistrationCredentials credentials = new RegistrationCredentials("Jane.Smith", "generated");
+        when(userAccountService.generateCredentials(user)).thenReturn(credentials);
 
-        assertSame(trainer, trainerService.create(trainer));
+        assertSame(credentials, trainerService.create(trainer));
         verify(userAccountService).generateCredentials(user);
         verify(trainerRepository).save(trainer);
     }

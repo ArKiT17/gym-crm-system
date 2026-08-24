@@ -1,33 +1,66 @@
 package com.maxlikarenko.gymcrmsystem.integration;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.jwt.JwsHeader;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
+    @Autowired
+    private JwtDecoder jwtDecoder;
+
+    @Autowired
+    private JwtEncoder jwtEncoder;
+
     @Test
     void registersAndAuthenticatesTrainee() throws Exception {
         Credentials trainee = registerTrainee("Rest", "Trainee");
 
-        mockMvc.perform(get("/api/auth/login")
-                        .param("username", trainee.username())
-                        .param("password", trainee.password()))
+        String loginResponse = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"%s","password":"%s"}
+                                """.formatted(trainee.username(), trainee.password())))
                 .andExpect(status().isOk())
-                .andExpect(header().exists("X-Transaction-Id"));
+                .andExpect(header().exists("X-Transaction-Id"))
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.tokenType", is("Bearer")))
+                .andExpect(jsonPath("$.expiresIn", is(jwtExpirationSeconds)))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = objectMapper.readTree(loginResponse).get("accessToken").asText();
+        Jwt jwt = jwtDecoder.decode(accessToken);
+
+        assertAll(
+                () -> assertEquals(trainee.username(), jwt.getSubject()),
+                () -> assertNotNull(jwt.getIssuedAt()),
+                () -> assertNotNull(jwt.getExpiresAt()),
+                () -> assertTrue(jwt.getExpiresAt() != null && jwt.getExpiresAt().isAfter(Instant.now())),
+                () -> assertNotNull(jwt.getId()),
+                () -> assertTrue(jwt.getId() != null && !jwt.getId().isBlank())
+        );
 
         mockMvc.perform(get("/api/trainees/{username}", trainee.username())
-                        .headers(trainee.headers()))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username", is(trainee.username())))
                 .andExpect(jsonPath("$.firstName", is("Rest")))
@@ -36,8 +69,167 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
     }
 
     @Test
+    void rejectsProtectedEndpointWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/api/training-types"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void locksLoginAfterThreeFailedAttempts() throws Exception {
+        Credentials trainee = registerTrainee("Brute", "Force");
+        String invalidLogin = """
+                {"username":"%s","password":"wrong-password"}
+                """.formatted(trainee.username());
+
+        for (int attempt = 0; attempt < 3; attempt++) {
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(invalidLogin))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidLogin))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.detail", is("Too many login attempts. Try again later.")));
+    }
+
+    @Test
+    void logoutRevokesAccessToken() throws Exception {
+        Credentials trainee = registerTrainee("Logout", "Trainee");
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .headers(trainee.headers()))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/trainees/{username}", trainee.username())
+                        .headers(trainee.headers()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void logoutRequiresAuthentication() throws Exception {
+        mockMvc.perform(post("/api/auth/logout"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void rejectsMalformedBearerToken() throws Exception {
+        mockMvc.perform(get("/api/training-types")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer malformed-token"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/training-types")
+                        .header(HttpHeaders.AUTHORIZATION, "Basic malformed-token"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void rejectsTamperedJwt() throws Exception {
+        Credentials trainee = registerTrainee("Tampered", "Token");
+        String tamperedToken = trainee.accessToken().substring(0, trainee.accessToken().lastIndexOf('.') + 1)
+                + "invalid-signature";
+
+        mockMvc.perform(get("/api/training-types")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tamperedToken))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void rejectsExpiredJwt() throws Exception {
+        String expiredToken = jwtEncoder.encode(
+                JwtEncoderParameters.from(
+                        JwsHeader.with(MacAlgorithm.HS256).build(),
+                        JwtClaimsSet.builder()
+                                .id(UUID.randomUUID().toString())
+                                .subject("Expired.User")
+                                .issuedAt(Instant.now().minusSeconds(120))
+                                .expiresAt(Instant.now().minusSeconds(60))
+                                .build()
+                )
+        ).getTokenValue();
+
+        mockMvc.perform(get("/api/training-types")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + expiredToken))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void revokingOneTokenDoesNotRevokeAnotherTokenForTheSameUser() throws Exception {
+        Credentials trainee = registerTrainee("Token", "Isolation");
+
+        String secondLoginResponse = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new LoginPayload(trainee.username(), trainee.password())
+                        )))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String secondToken = objectMapper.readTree(secondLoginResponse).get("accessToken").asText();
+
+        assertNotEquals(trainee.accessToken(), secondToken);
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .headers(trainee.headers()))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/training-types")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + secondToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void allowsCorsPreflightFromConfiguredOrigin() throws Exception {
+        mockMvc.perform(options("/api/training-types")
+                        .header("Origin", "http://localhost:3000")
+                        .header("Access-Control-Request-Method", "GET")
+                        .header("Access-Control-Request-Headers", "Authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"))
+                .andExpect(header().string("Access-Control-Allow-Methods", org.hamcrest.Matchers.containsString("GET")))
+                .andExpect(header().string("Access-Control-Allow-Headers", org.hamcrest.Matchers.containsString("Authorization")))
+                .andExpect(header().string("Access-Control-Max-Age", "3600"));
+    }
+
+    @Test
+    void exposesTransactionHeaderForConfiguredCorsOrigin() throws Exception {
+        Credentials trainee = registerTrainee("Cors", "Response");
+
+        mockMvc.perform(get("/api/training-types")
+                        .headers(trainee.headers())
+                        .header("Origin", "http://localhost:3000"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"))
+                .andExpect(header().string("Access-Control-Expose-Headers", org.hamcrest.Matchers.containsString("X-Transaction-Id")));
+    }
+
+    @Test
+    void rejectsCorsPreflightFromUnconfiguredOrigin() throws Exception {
+        mockMvc.perform(options("/api/training-types")
+                        .header("Origin", "http://malicious.example")
+                        .header("Access-Control-Request-Method", "GET"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void rejectsAccessToAnotherUsersProfile() throws Exception {
+        Credentials trainee = registerTrainee("Owner", "Trainee");
+        Credentials trainer = registerTrainer("Other", "Trainer");
+
+        mockMvc.perform(get("/api/trainers/{username}", trainer.username())
+                        .headers(trainee.headers()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void generatesAndPropagatesTransactionId() throws Exception {
-        String firstTransactionId = mockMvc.perform(get("/api/training-types"))
+        Credentials trainee = registerTrainee("Transaction", "Trainee");
+
+        String firstTransactionId = mockMvc.perform(get("/api/training-types")
+                        .headers(trainee.headers()))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -45,6 +237,7 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
 
         String propagatedTransactionId = UUID.randomUUID().toString();
         String secondTransactionId = mockMvc.perform(get("/api/training-types")
+                        .headers(trainee.headers())
                         .header("X-Transaction-Id", propagatedTransactionId))
                 .andExpect(status().isOk())
                 .andReturn()
@@ -54,28 +247,6 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
         assertTrue(firstTransactionId != null && !firstTransactionId.isBlank());
         assertEquals(propagatedTransactionId, secondTransactionId);
         assertNotEquals(firstTransactionId, secondTransactionId);
-    }
-
-    @Test
-    void rejectsProtectedRequestsWithoutAuthentication() throws Exception {
-        mockMvc.perform(get("/api/training-types"))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(get("/api/trainees/unknown.user"))
-                .andExpect(status().isUnauthorized());
-
-        mockMvc.perform(post("/api/trainings")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "traineeUsername": "unknown.trainee",
-                                  "trainerUsername": "unknown.trainer",
-                                  "trainingName": "Session",
-                                  "trainingDate": "2026-01-01",
-                                  "trainingDuration": 60
-                                }
-                                """))
-                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -94,5 +265,8 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
                                 {"firstName":"Rest", "lastName":"Trainee", "dateOfBirth":"not-a-date"}
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    private record LoginPayload(String username, String password) {
     }
 }
