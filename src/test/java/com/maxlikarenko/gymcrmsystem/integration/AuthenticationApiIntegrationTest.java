@@ -5,21 +5,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
-import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.*;
 
 import java.time.Instant;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
@@ -69,9 +62,15 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
     }
 
     @Test
-    void rejectsProtectedEndpointWithoutAuthentication() throws Exception {
+    void allowsPublicTrainingTypesAndOpenApiWithoutAuthentication() throws Exception {
         mockMvc.perform(get("/api/training-types"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/swagger-ui/index.html"))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -116,11 +115,11 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
 
     @Test
     void rejectsMalformedBearerToken() throws Exception {
-        mockMvc.perform(get("/api/training-types")
+        mockMvc.perform(get("/api/trainees/{username}", "protected.user")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer malformed-token"))
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(get("/api/training-types")
+        mockMvc.perform(get("/api/trainees/{username}", "protected.user")
                         .header(HttpHeaders.AUTHORIZATION, "Basic malformed-token"))
                 .andExpect(status().isUnauthorized());
     }
@@ -131,7 +130,7 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
         String tamperedToken = trainee.accessToken().substring(0, trainee.accessToken().lastIndexOf('.') + 1)
                 + "invalid-signature";
 
-        mockMvc.perform(get("/api/training-types")
+        mockMvc.perform(get("/api/trainees/{username}", trainee.username())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + tamperedToken))
                 .andExpect(status().isUnauthorized());
     }
@@ -150,7 +149,7 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
                 )
         ).getTokenValue();
 
-        mockMvc.perform(get("/api/training-types")
+        mockMvc.perform(get("/api/trainees/{username}", "expired.user")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + expiredToken))
                 .andExpect(status().isUnauthorized());
     }
@@ -176,7 +175,7 @@ class AuthenticationApiIntegrationTest extends RestApiIntegrationTestSupport {
                         .headers(trainee.headers()))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/training-types")
+        mockMvc.perform(get("/api/trainees/{username}", trainee.username())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + secondToken))
                 .andExpect(status().isOk());
     }

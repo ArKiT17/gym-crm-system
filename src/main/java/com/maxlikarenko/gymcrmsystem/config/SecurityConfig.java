@@ -50,8 +50,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(POST, "/api/auth/login", "/api/trainees", "/api/trainers").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/training-types").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(POST, "/api/auth/logout").authenticated()
                         .anyRequest().authenticated()
                 )
                 .logout(logout -> logout
